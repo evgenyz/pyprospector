@@ -1,0 +1,11 @@
+title: Verify files against RPM database and collect inconsistencies
+kind: process_output
+properties:
+  executable: "/usr/bin/rpm"
+  arguments:
+    - "-Va"
+    - cups
+    - bolt
+wrapper:
+  regex:
+    expression: "^(?P<verify_bits>[SM5UGT.?]{9})\\s+(?P<type>[\\w\\s])\\s+(?P<name>.+)$"

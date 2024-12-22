@@ -1,0 +1,10 @@
+title: Find Unowned Files
+blocks:
+- id: collect/unowned_files
+  type: probe
+  parameters:
+    path: /home/ekolesni/.cache/
+- id: /any_exist
+  type: filter
+  sources:
+  - '@collect'

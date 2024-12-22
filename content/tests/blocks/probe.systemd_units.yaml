@@ -1,0 +1,5 @@
+title: Fetch systemd units status summary
+kind: process_output
+properties:
+  executable: "/usr/bin/systemctl"
+  arguments: ["--root=/", "list-unit-files", "-o", "json"]

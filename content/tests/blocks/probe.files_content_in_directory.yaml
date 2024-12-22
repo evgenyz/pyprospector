@@ -1,0 +1,7 @@
+title: Get files content from the directory ${path:/etc}
+kind: file_content
+parameters:
+  path: "/etc"
+properties:
+  sorted: "alphabetical"
+  paths: ["$path"]

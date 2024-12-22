@@ -1,0 +1,20 @@
+title: Service 'telnet' is permanently disabled
+blocks:
+- id: collect/systemd_units
+  type: probe
+- id: lookup
+  title: Find 'telnet' service status
+  type: filter
+  kind: cel
+  sources:
+  - "@collect"
+  properties:
+    expression: "arguments.objects.filter(o, o.unit_file == 'telnet')"
+    arguments:
+      objects: "@1"
+- id: /masked
+  type: filter
+  sources:
+  - lookup
+
+

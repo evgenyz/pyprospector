@@ -1,0 +1,12 @@
+title: Fetch SELinux status summary
+kind: process_output
+properties:
+  executable: "/usr/bin/sestatus"
+  arguments: []
+wrapper:
+  regex:
+    expression: "SELinux status:\\s+(?P<status>enabled|disabled).*?\
+      Loaded policy name:\\s+(?P<policy>\\w+).*?\
+      Current mode:\\s+(?P<current_mode>\\w+).*?\
+      Mode from config file:\\s+(?P<config_mode>\\w+)"
+    flags: MS

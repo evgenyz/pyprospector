@@ -1,0 +1,13 @@
+title: List files or directories not owned by a known user (under $path, default:'/'))
+kind: process_output
+parameters:
+  path: /
+properties:
+  executable: /usr/bin/find
+  arguments:
+  - /home/ekolesni/.cache/
+  - -nouser
+  - -printf
+  - "\x1E{\"file\": \"%p\"}\n"
+wrapper:
+  json_seq: {}

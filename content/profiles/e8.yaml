@@ -1,0 +1,44 @@
+title: Australian Cyber Security Centre (ACSC) Essential Eight
+description: |
+  This profile contains configuration checks for Linux
+  that align to the Australian Cyber Security Centre (ACSC) Essential Eight.
+
+  A copy of the Essential Eight in Linux Environments guide can be found at the
+  ACSC website:
+
+  https://www.cyber.gov.au/acsc/view-all-content/publications/hardening-linux-workstations-and-servers
+
+variables:
+  foo: "bar"
+
+tests:
+  # Packages
+  # Obsolete
+  - package_talk_absent
+  # - package_talk-server_removed
+  # - package_ypbind_removed
+  # - package_telnet_removed
+  # - package_telnet-server_removed
+  # - package_rsh_removed
+  # - package_rsh-server_removed
+  # - package_quagga_removed
+  # - package_squid_removed
+
+  # Required
+  - package_rear_installed
+
+  # Services
+  - service_telnet_masked
+  # - service_avahi-daemon_disabled
+  # - service_squid_disabled
+
+  # SELinux
+  - selinux_state_enforcing
+
+  # Filesystem and access rights integrity
+  # FIXME - verify_packaged_files
+  - find_unowned_files
+  - file_ownership_binary_dirs
+
+  # Audit
+  - audit_rules_execution_setsebool

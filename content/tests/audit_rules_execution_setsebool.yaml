@@ -1,0 +1,40 @@
+title: Record Any Attempts to Run setsebool
+description: |-
+  At a minimum, the audit system should collect any execution attempt
+  of the <tt>setsebool</tt> command for all users and root. If the <tt>auditd</tt>
+  daemon is configured to use the <tt>augenrules</tt> program to read audit rules
+  during daemon startup (the default), add the following lines to a file with suffix
+  <tt>.rules</tt> in the directory <tt>/etc/audit/rules.d</tt>:
+  <pre>-a always,exit -F path=/usr/sbin/setsebool {{{ perm_x }}}-F auid&gt;={{{ auid }}} -F auid!=unset -F key=privileged</pre>
+  If the <tt>auditd</tt> daemon is configured to use the <tt>auditctl</tt>
+  utility to read audit rules during daemon startup, add the following lines to
+  <tt>/etc/audit/audit.rules</tt> file:
+  <pre>-a always,exit -F path=/usr/sbin/setsebool {{{ perm_x }}}-F auid&gt;={{{ auid }}} -F auid!=unset -F key=privileged</pre>
+blocks:
+  - id: collect
+    title: '...'
+    type: probe
+    kind: audit_rule_files_content
+    properties:
+      path: tests/data/rules.d/*
+  - id: find_rules
+    title: '...'
+    type: filter
+    kind: cel
+    sources:
+      - collect
+    properties:
+      expression: "audit_has_rule(arguments.config.rules, arguments.wanted_rule)"
+      arguments:
+        config: "@1"
+        wanted_rule: [['-F arch=b64', '-F arch=b32'], '-F path=/usr/sbin/setsebool', '-F perm=x', '-F auid>=1000', ['-F auid!=unset', '-F auid!=4294967295', '-F auid!=-1']]
+  - id: filter
+    title: '...'
+    type: filter
+    kind: cel
+    sources:
+      - find_rules
+    properties:
+      expression: "{'result': arguments.found_rules.filter(r, r.status.correct).size() < 2, 'findings': {'invalid_rules': arguments.found_rules.filter(r, !r.status.correct)}}"
+      arguments:
+        found_rules: "@1"

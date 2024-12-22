@@ -1,0 +1,14 @@
+title: SELinux is in 'enforcing' mode
+blocks:
+- id: collect/selinux_status
+  type: probe
+- id: not_enforcing
+  title: If SELinux is not in 'enforcing' mode it is a finding
+  type: filter
+  kind: cel
+  sources:
+  - '@collect'
+  properties:
+    expression: '{''result'': arguments[''status''][0][''current_mode''] != ''enforcing'', ''findings'': arguments[''status''][0][''current_mode''] != ''enforcing'' ? [{''mode'': arguments[''status''][0][''current_mode'']}] : []}'
+    arguments:
+      status: '@1'

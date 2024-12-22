@@ -1,0 +1,2 @@
+-a always,exit -F path=/usr/sbin/setsebool -F arch=b64 -F perm=x -F auid>=1000 -F auid!=unset -F key=privileged
+-a always,exit -F path=/usr/sbin/setsebool -F arch=b32 -F perm=x -F auid>=1000 -F auid!=unset -F key=privileged

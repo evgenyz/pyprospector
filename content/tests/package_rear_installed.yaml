@@ -1,0 +1,14 @@
+title: Package 'rear' is installed
+blocks:
+- id: collect/query_package
+  type: probe
+  parameters:
+    package: rear
+- id: filter/not_installed
+  type: filter
+  sources:
+  - '@collect'
+- id: /any_exist
+  type: filter
+  sources:
+  - '@filter'

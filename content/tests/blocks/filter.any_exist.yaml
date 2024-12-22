@@ -1,0 +1,6 @@
+title: An existing object is a finding
+kind: cel
+properties:
+  expression: "{'result': size(arguments['objects']) > 0, 'findings': arguments['objects']}"
+  arguments:
+    objects: "@1"

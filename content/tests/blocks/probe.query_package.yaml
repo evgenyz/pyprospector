@@ -1,0 +1,14 @@
+title: Query basic package info from RPM database
+kind: process_output
+parameters:
+  package: rpm
+properties:
+  executable: "/usr/bin/rpm"
+  arguments:
+    - "-q"
+    - "$package"
+    - "--qf"
+    - "\"%{name} %{evr}\\n\""
+wrapper:
+  regex:
+    expression: "^(package\\s(?P<absent>\\S+)\\s+is\\snot\\sinstalled|(?P<installed>\\S+)\\s(?P<version>\\S+))$"

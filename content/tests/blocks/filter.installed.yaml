@@ -1,0 +1,7 @@
+title: If the package is installed it is a finding
+type: filter
+kind: cel
+properties:
+  expression: "arguments['objects'].filter(m, m['installed'] != '').map(m, {'package': m['installed'], 'version': m['version']})"
+  arguments:
+    objects: "@1"

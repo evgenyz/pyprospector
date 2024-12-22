@@ -1,0 +1,9 @@
+#!/bin/sh
+
+cd content
+./build || {
+	echo "Unable to build content"
+	exit 1
+}
+cd ..
+./prospector content/e8.json

@@ -1,0 +1,14 @@
+title: Package 'talk' is absent
+blocks:
+- id: collect/query_package
+  type: probe
+  parameters:
+    package: talk
+- id: filter/installed
+  type: filter
+  sources:
+  - '@collect'
+- id: /any_exist
+  type: filter
+  sources:
+  - '@filter'

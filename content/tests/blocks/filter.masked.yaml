@@ -1,0 +1,7 @@
+title: If the service is not masked it is a finding
+type: filter
+kind: cel
+properties:
+  expression: "{'result': arguments.objects.all(o, o.state != masked), 'findings': arguments.objects.all(o, o.state != masked) ? arguments.objects : []}"
+  arguments:
+    objects: "@1"
