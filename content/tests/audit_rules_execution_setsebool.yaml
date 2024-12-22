@@ -26,7 +26,7 @@ blocks:
     properties:
       expression: "audit_has_rule(arguments.config.rules, arguments.wanted_rule)"
       arguments:
-        config: "@1"
+        config: "$1"
         wanted_rule: [['-F arch=b64', '-F arch=b32'], '-F path=/usr/sbin/setsebool', '-F perm=x', '-F auid>=1000', ['-F auid!=unset', '-F auid!=4294967295', '-F auid!=-1']]
   - id: filter
     title: '...'
@@ -37,4 +37,4 @@ blocks:
     properties:
       expression: "{'result': arguments.found_rules.filter(r, r.status.correct).size() < 2, 'findings': {'invalid_rules': arguments.found_rules.filter(r, !r.status.correct)}}"
       arguments:
-        found_rules: "@1"
+        found_rules: "$1"

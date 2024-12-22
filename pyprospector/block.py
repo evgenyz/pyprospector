@@ -37,6 +37,5 @@ class Block(CreatableFromJSON):
     def sources(self):
         return self._sources
 
-    def get_dependencies(self):
-        if self._type == 'filter':
-            return [src.strip('@') for src in self._sources]
+    # def get_dependencies(self):
+    #    return self._sources

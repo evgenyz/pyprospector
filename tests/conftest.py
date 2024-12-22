@@ -24,7 +24,7 @@ def block_filter_cel_result_from_test_po_dict():
         'properties': {
             "expression": "{'result': arguments['objects']['result']}",
             "arguments": {
-                'objects': '@1'
+                'objects': '$1'
             }
         }
     }

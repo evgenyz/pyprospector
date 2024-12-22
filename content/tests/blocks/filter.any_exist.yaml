@@ -3,4 +3,4 @@ kind: cel
 properties:
   expression: "{'result': size(arguments['objects']) > 0, 'findings': arguments['objects']}"
   arguments:
-    objects: "@1"
+    objects: "$1"

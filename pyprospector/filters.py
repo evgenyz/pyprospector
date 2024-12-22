@@ -30,7 +30,7 @@ class CELFilter(Filter):
         log.info(f"Calling {self.__class__}: {self._expression}")
         args = {}
         for arg, value in self._arguments.items():
-            if type(value) is str and value.startswith('@'):
+            if type(value) is str and value.startswith('$'):
                 index = int(value[1:])
                 args[arg] = self._sources[index-1]._result
             else:

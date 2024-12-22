@@ -11,4 +11,4 @@ blocks:
   properties:
     expression: '{''result'': arguments[''status''][0][''current_mode''] != ''enforcing'', ''findings'': arguments[''status''][0][''current_mode''] != ''enforcing'' ? [{''mode'': arguments[''status''][0][''current_mode'']}] : []}'
     arguments:
-      status: '@1'
+      status: '$1'

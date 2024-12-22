@@ -4,4 +4,4 @@ kind: cel
 properties:
   expression: "arguments['objects'].filter(m, m['installed'] != '').map(m, {'package': m['installed'], 'version': m['version']})"
   arguments:
-    objects: "@1"
+    objects: "$1"

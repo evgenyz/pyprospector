@@ -290,8 +290,8 @@ class ProcessOutputProbe(Wrappable, Probe):
 
     def resolve_source_parameters(self):
         for src_i, src in enumerate(self._sources):
-            if f'@{src_i + 1}' in self._arguments:
-                i = self._arguments.index(f'@{src_i + 1}')
+            if f'${src_i + 1}' in self._arguments:
+                i = self._arguments.index(f'${src_i + 1}')
                 self._arguments.pop(i)
                 l = src._result
                 l.reverse()

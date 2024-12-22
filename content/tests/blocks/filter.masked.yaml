@@ -4,4 +4,4 @@ kind: cel
 properties:
   expression: "{'result': arguments.objects.all(o, o.state != masked), 'findings': arguments.objects.all(o, o.state != masked) ? arguments.objects : []}"
   arguments:
-    objects: "@1"
+    objects: "$1"

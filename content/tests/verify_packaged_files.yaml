@@ -11,7 +11,7 @@ blocks:
   properties:
     expression: arguments.objects.map(element, element.name)
     arguments:
-      objects: '@1'
+      objects: '$1'
 - id: collect_invalid_packages_names
   title: '...'
   type: probe
@@ -20,7 +20,7 @@ blocks:
   - invalid_files_as_list
   properties:
     executable: /usr/bin/rpm
-    arguments: ["-qf", "@1", "--qf", '\{"package": "%{name}", "files": \[ ""[,"%{filenames}"] \]\}\n']
+    arguments: ["-qf", "$1", "--qf", '\{"package": "%{name}", "files": \[ ""[,"%{filenames}"] \]\}\n']
   wrapper:
     json_seq: {}
 - id: compose_findings
@@ -33,8 +33,8 @@ blocks:
   properties:
     expression: 'arguments.files.map(el, {"verify_bits": el.verify_bits, "file": el.name, "package": arguments.packages.filter(m, el.name in m.files[0].package})'
     arguments:
-      files: '@1'
-      packages: '@2'
+      files: '$1'
+      packages: '$2'
 - id: /any_exist
   type: filter
   sources:

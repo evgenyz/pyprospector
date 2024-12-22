@@ -22,7 +22,7 @@ def test_process_output_probe_with_source():
         'sources': ['test_po_params'],
         'properties': {
             "executable": "/usr/bin/echo",
-            "arguments": ['{"result": "', '@1', '"}']
+            "arguments": ['{"result": "', '$1', '"}']
         }
     }
     ps = Block.create_from_dict(probe_src_dict)
