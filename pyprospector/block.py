@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import copy
+import json
+
 from pyprospector.common import CreatableFromJSON
 
 
@@ -19,7 +22,10 @@ class Block(CreatableFromJSON):
     def __init__(self, block_dict):
         super().__init__(block_dict)
         self._type = None
+        self._kind = None
+        self._raw_src = copy.deepcopy(block_dict)
         self._sources = block_dict.get('sources', [])
+        self._properties = block_dict.get('properties', [])
 
     def __repr__(self):
         return f'{self.__class__}: {self.id}, sources: {repr(self.sources)}'

@@ -14,7 +14,7 @@ blocks:
   - id: collect
     title: '...'
     type: probe
-    kind: audit_rule_files_content
+    kind: audit_rule_file_content
     properties:
       path: tests/data/rules.d/*
   - id: find_rules

@@ -47,5 +47,6 @@ def test_po_echo_cel_result(block_probe_po_echo_true_dict, block_filter_cel_resu
     return {
         'id': 'test_test',
         'title': 'Test test',
+        'description': 'Test test description',
         'blocks': [block_probe_po_echo_true_dict, block_filter_cel_result_from_test_po_dict]
     }

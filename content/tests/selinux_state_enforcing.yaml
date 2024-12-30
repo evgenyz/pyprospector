@@ -1,4 +1,5 @@
 title: SELinux is in 'enforcing' mode
+description: '...'
 blocks:
 - id: collect/selinux_status
   type: probe
@@ -9,6 +10,11 @@ blocks:
   sources:
   - '@collect'
   properties:
-    expression: '{''result'': arguments[''status''][0][''current_mode''] != ''enforcing'', ''findings'': arguments[''status''][0][''current_mode''] != ''enforcing'' ? [{''mode'': arguments[''status''][0][''current_mode'']}] : []}'
+    expression: >- 
+      {'result': arguments['status'][0]['current_mode'] != 'enforcing', 'findings': arguments['status'][0]['current_mode'] != 'enforcing' 
+      ? 
+      [{'mode': arguments['status'][0]['current_mode']}] 
+      : 
+      []}
     arguments:
       status: '$1'

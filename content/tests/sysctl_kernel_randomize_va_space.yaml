@@ -1,0 +1,15 @@
+title: Enable Randomized Layout of Virtual Address Space
+description: ...
+blocks:
+- id: collect/sysctl_conf
+  type: probe
+- id: filter
+  title: ...
+  type: filter
+  kind: cel
+  sources:
+    - '@collect'
+  properties:
+    expression: "sysctl_has_value(arguments.conf, 'kernel/randomize_va_space')"
+    arguments:
+      conf: '$1'

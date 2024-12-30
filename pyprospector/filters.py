@@ -1,6 +1,9 @@
 from abc import *
 
 import logging
+from copy import deepcopy
+from fnmatch import fnmatch
+
 log = logging.getLogger(__name__)
 from cel import evaluate, Context
 
@@ -11,6 +14,7 @@ class Filter(Block):
     def __init__(self, filter_dict):
         super().__init__(filter_dict)
         self._type = 'filter'
+        self._kind = filter_dict['kind']
         self._title = filter_dict['title']
         self._result = None
 
@@ -36,13 +40,20 @@ class CELFilter(Filter):
             else:
                 args[arg] = value
 
-        log.info(f"Evaluate with {repr({'arguments': args})}")
+        log.debug(f"Evaluate with {repr({'arguments': args})}")
         context = Context()
         for n, f in FUNCTIONS.items():
             context.add_function(n, f)
         context.update({'arguments': args})
         self._result = evaluate(self._expression, context)
 
+
+def _cel_sysctl_has_value(entries: dict, key: list) -> list:
+    found = []
+    for entry in entries['variables']:
+        if fnmatch(entry['variable'], key) and key not in entry['exclude']:
+            found.append(entry)
+    return found
 
 def _cel_audit_has_rule(entries: list, fields: list) -> list:
     found = []
@@ -58,10 +69,17 @@ def _cel_audit_has_rule(entries: list, fields: list) -> list:
             else:
                 if f not in e['fields']:
                     res = False
-        print("***", repr(e['fields']), repr(fields), repr(res))
+        #print("***", repr(e['fields']), repr(fields), repr(res))
         if res:
            found.append(e)
     return found
+
+def _cel_content_collate(entries: list) -> list:
+    for i, f in enumerate(entries):
+        for k, v in entries[len(entries)-i-1]['content'].items():
+            for j in range(len(entries)-i-2):
+                entries[j]['content'].pop(k, None)
+    return entries
 
 
 FILTERS = {
@@ -69,7 +87,9 @@ FILTERS = {
 }
 
 FUNCTIONS = {
-    'audit_has_rule': _cel_audit_has_rule
+    'audit_has_rule': _cel_audit_has_rule,
+    'sysctl_has_value': _cel_sysctl_has_value,
+    'content_collate': _cel_content_collate,
 }
 
 def create_filter_from_dict(filter_dict):

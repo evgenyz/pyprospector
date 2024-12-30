@@ -1,0 +1,68 @@
+title: Verify packaged files
+description: '...'
+blocks:
+- id: collect/broken_packaged_files
+  type: probe
+- id: broken_but_configs
+  title: '...'
+  type: filter
+  kind: cel
+  sources:
+    - '@collect'
+  properties:
+    expression: arguments.objects.filter(el, el.type != 'c')
+    arguments:
+      objects: '$1'
+- id: broken_files_list
+  title: '...'
+  type: filter
+  kind: cel
+  sources:
+  - 'broken_but_configs'
+  properties:
+    expression: arguments.objects.map(el, el.name)
+    arguments:
+      objects: '$1'
+- id: collect_broken_packages_names
+  title: '...'
+  type: probe
+  kind: process_output
+  sources:
+  - broken_files_list
+  properties:
+    executable: /usr/bin/rpm
+    arguments: ['-qf', '$1', '--qf', '\{"package": "%{name}", "files": \[ ""[,"%{filenames}"] \]\}\n']
+  wrapper:
+    json_seq: {}
+  encoding: unicode_escape
+- id: compose_findings
+  title: '...'
+  type: filter
+  kind: cel
+  sources:
+  - broken_but_configs
+  - collect_broken_packages_names
+  properties:
+    expression: >-
+      arguments.files.map(el, 
+      {
+      "verify_bits": el.verify_bits, "file": el.name, 
+      "package": arguments.packages.filter(m, el.name in m.files).map(m, m.package)[0]
+      })
+    arguments:
+      files: '$1'
+      packages: '$2'
+- id: broken_hashes
+  title: ...
+  type: filter
+  kind: cel
+  sources:
+    - compose_findings
+  properties:
+    expression: >-
+      {
+      'result': arguments.entries.filter(en, en.verify_bits.contains('5')).size() > 0, 
+      'findings': arguments.entries.filter(en, en.verify_bits.contains('5'))
+      }
+    arguments:
+      entries: '$1'

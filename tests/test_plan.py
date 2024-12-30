@@ -5,6 +5,7 @@ def test_plan(test_po_echo_cel_result):
     plan_dict = {
         'id': 'test_plan',
         'title': 'Test plan',
+        'description': 'Test plan description',
         'variables': {
             'foo': 'bar'
         },

@@ -1,9 +1,12 @@
+import configparser
 import json
+import os.path
 import typing
 from abc import *
 from contextlib import contextmanager
 
 import logging
+from fnmatch import fnmatch
 
 log = logging.getLogger(__name__)
 import subprocess
@@ -14,6 +17,9 @@ from pyprospector.block import Block
 
 
 class Wrapper:
+    def __init__(self, params: dict):
+        self._params = params
+
     @classmethod
     def create_from_dict(cls, wrapper_dict: dict):
         wrapper_type, params = wrapper_dict.popitem()
@@ -27,17 +33,26 @@ class Wrapper:
     def wrap_string(self, string: str):
         pass
 
+    def __iter__(self):
+        for p, v in self._params.items():
+            yield p, v
+
 
 class KeyValue(Wrapper):
     def __init__(self, params: dict):
+        super().__init__(params)
         self._delimiter = params.get('delimiter', "=")
         self._quotes = params.get('quotes', '\'\"')
         self._ignore_prefixes = params.get('ignore_prefixes', ['#'])
         self._trim_whitespace = params.get('trim_whitespace', True)
 
     def wrap_file(self, f: typing.IO):
-        content = f.read()
-        return dict(self.wrap_line(content))
+        res = {}
+        for l in f.readlines():
+            kv = self.wrap_line(l)
+            if kv is not None:
+                res[kv[0]] = kv[1]
+        return res
 
     def wrap_string(self, string: str):
         # FIXME: Implement
@@ -49,25 +64,50 @@ class KeyValue(Wrapper):
                 return True
         return False
 
-    def wrap_line(self, string: str):
-        # FIXME: Balanced (?<=(["']\b))(?:(?=(\\?))\2.)*?(?=\1)
-        kv = rf"[^{re.escape(self._quotes)}]*?" if self._quotes else rf"[^\s{re.escape(self._delimiter)}]+?"
-        quo = rf"[{re.escape(self._quotes)}]*" if self._quotes else ''
-        pattern = (rf"^{'\s*?' if self._trim_whitespace else ''}"
-                   rf"{quo}(?P<key>{kv}){quo}"
-                   rf"\s*?{re.escape(self._delimiter)}\s*?"
-                   rf"{quo}(?P<value>{kv}){quo}"
-                   rf"{'\s*?' if self._trim_whitespace else ''}$")
-        log.info(f"Wrapping (string/key-value) with Regex expression '{pattern}'")
-        for m in re.finditer(pattern, string, re.MULTILINE):
-            d = m.groupdict()
-            if self._has_ignored_prefix(d['key']):
-                continue
-            yield d['key'], d['value']
+    def wrap_line(self, string: str) -> (str, str):
+        string = string.strip(' \n')
+        if not string:
+            return None
+
+        if self._has_ignored_prefix(string):
+            return None
+
+        if self._delimiter not in string:
+            # TODO: mark invalid line
+            return None
+
+        key, value = string.split(self._delimiter, 1)
+        key = key.strip(self._quotes)
+        value = value.strip(self._quotes)
+        if self._trim_whitespace:
+            key = key.strip(' ')
+            value = value.strip(' ')
+
+        return key, value
+
+
+class INI(Wrapper):
+    def __init__(self, params: dict):
+        super().__init__(params)
+
+    def wrap_file(self, f: typing.IO):
+        config = configparser.ConfigParser()
+        config.read_file(f)
+        result = {}
+        for section in config.sections():
+            result[section] = {}
+            for k, v in config[section].items():
+                result[section][k] = v
+        return result
+
+    def wrap_string(self, string: str):
+        # FIXME: Implement
+        pass
 
 
 class RegEx(Wrapper):
     def __init__(self, params: dict):
+        super().__init__(params)
         self._expression = params['expression']
         self._flags = re.MULTILINE
         flags = params.get('flags', '').lower()
@@ -93,6 +133,7 @@ class RegEx(Wrapper):
 
 class JsonSeq(Wrapper):
     def __init__(self, params: dict):
+        super().__init__(params)
         self._stringify = params.get('stringify', False)
 
     def wrap_file(self, f: typing.TextIO):
@@ -130,8 +171,10 @@ class Probe(Block):
     def __init__(self, probe_dict):
         super().__init__(probe_dict)
         self._type = 'probe'
+        self._kind = probe_dict['kind']
         self._title = probe_dict['title']
         self._sudo = probe_dict.get('sudo', False)
+        self._encoding = probe_dict.get('encoding', None)
         self._result = None
         self._error = None
 
@@ -141,7 +184,6 @@ class Probe(Block):
 
     @contextmanager
     def _open(self, fn: str):
-        res = None
         if self._sudo:
             cmd = ['/usr/bin/pkexec', '--keep-cwd', '/usr/bin/cat', fn]
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True)
@@ -165,8 +207,9 @@ class FileContentProbe(Wrappable, Probe):
 
         res = []
         for path in self._paths:
-            for fn in glob.iglob(path):
+            for fn in sorted(glob.iglob(path)):
                 with self._open(fn) as f:
+                    log.debug(f"Opened file '{fn}'")
                     res.append({
                         'file': fn,
                         'content': self._wrap_file(f)
@@ -179,14 +222,58 @@ class FileContentProbe(Wrappable, Probe):
         return str(self.__class__) + str(self._parameters)
 
 
-class AuditDRuleFilesContentProbe(Probe):
+class INIFileContentProbe(Probe):
+    def __init__(self, probe_dict):
+        super().__init__(probe_dict)
+        self._parameters = probe_dict.get('parameters', {})
+        self._paths = probe_dict['properties']['paths']
+
+    def __call__(self, *args, **kwargs):
+        log.info(f"Calling {self.__class__}: {self._paths}")
+
+        files = []
+        config_res = configparser.ConfigParser(defaults={})
+        for path in self._paths:
+            for fn in glob.iglob(path):
+                with self._open(fn) as f:
+                    config = configparser.ConfigParser()
+                    config.read_file(f)
+                    result = {}
+                    for section in config.sections():
+                        result[section] = {}
+                        for k, v in config[section].items():
+                            result[section][k] = v
+                    config_res.read_dict(result)
+
+                    files.append({
+                        'file': fn,
+                        'content': result
+                    })
+
+        result_res = {}
+        for section in config_res.sections():
+            result_res[section] = {}
+            for k, v in config_res[section].items():
+                result_res[section][k] = v
+
+        self._result = {
+            'files': files,
+            'result': result_res
+        }
+        log.debug(f"{self.__class__} result: {result_res}")
+
+    def get_result_id(self):
+        return str(self.__class__) + str(self._parameters)
+
+
+class AuditDRuleFileContentProbe(Probe):
     def __init__(self, probe_dict):
         super().__init__(probe_dict)
         self._path = probe_dict['properties']['path']
 
     def _get_rule_element_pairs(self, rule_string: str):
         rl = rule_string.split(' ')
-        # FIXME: If needed we could add a None or '' to even-out the list
+        # FIXME: Do we need to add a None or '' to even-out the list?
         return [' '.join([k, v]) for k, v in zip(rl[::2], rl[1::2])]
 
     def _mark_rules_as_deleted(self, rules, origin: str):
@@ -263,6 +350,84 @@ class AuditDRuleFilesContentProbe(Probe):
         self._result = res
 
 
+class SysctlDFileContentProbe(Probe):
+    def __init__(self, probe_dict):
+        super().__init__(probe_dict)
+        #self._paths = [
+        #    "/usr/lib/sysctl.d/*.conf",
+        #    "/usr/local/lib/sysctl.d/*.conf",
+        #    "/run/sysctl.d/*.conf",
+        #    "/etc/sysctl.d/*.conf",
+        #    "/etc/sysctl.conf"
+        #]
+        self._path = probe_dict['properties']['path']
+
+    def _normalize_key(self, key: str) -> str:
+        slash_pos = key.find('/')
+        dot_pos = key.find('.')
+        if (-1 < slash_pos and -1 < dot_pos < slash_pos) or (-1 == slash_pos and -1 < dot_pos):
+            return key.translate(str.maketrans('./', '/.'))
+        return key
+
+    def _exclude_from_glob(self, res, variable):
+        for r in res['variables']:
+            if fnmatch(variable, r['variable']):
+                if variable not in r['exclude']:
+                    r['exclude'].append(variable)
+
+    def _read_variables(self, f, res):
+        l_no = 0
+        for line in f.readlines():
+            l_no += 1
+            line = line.strip(' \n')
+            if not line or line.startswith('#'):
+                continue
+
+            silent = False
+            if line.startswith('-'):
+                line = line[1:]
+                if '=' not in line:
+                    self._exclude_from_glob(res, self._normalize_key(line))
+                    continue
+                silent = True
+
+            variable, value = map(str.strip, line.split('=', 1))
+
+            entry = {
+                'variable': self._normalize_key(variable),
+                'value': value,
+                'silent': silent,
+                'file': f'{f.name}:{l_no}',
+                'exclude': [],
+            }
+
+            res['variables'].append(entry)
+
+    def _build_conf_set(self, confs, fn):
+        bn = '/' + os.path.basename(fn)
+        confs = [conf for conf in confs if not conf.endswith(bn)] + [fn]
+        return confs
+
+    def __call__(self, *args, **kwargs):
+        log.info(f"Calling {self.__class__}: {self._path}")
+
+        res = {
+            'variables': []
+        }
+
+        confs = []
+        for globs in self._path:
+            for fn in sorted(glob.glob(globs)):
+                confs = self._build_conf_set(confs, fn)
+
+        for fn in confs:
+            log.info(f"Loading file '{fn}'")
+            with self._open(fn) as f:
+                self._read_variables(f, res)
+
+        self._result = res
+
+
 class ProcessOutputProbe(Wrappable, Probe):
     def __init__(self, probe_dict):
         super().__init__(probe_dict)
@@ -304,12 +469,18 @@ class ProcessOutputProbe(Wrappable, Probe):
         self.resolve_source_parameters()
 
         cmd = [self._executable] + self._arguments
+
+        if self._sudo:
+            cmd = ['/usr/bin/pkexec', '--keep-cwd'] + cmd
+
+        log.info(f"Command: {' '.join(cmd)}")
         with subprocess.Popen(cmd, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
-                              stdin=subprocess.PIPE, text=True) as proc:
+                              stdin=subprocess.PIPE, text=True, encoding=self._encoding) as proc:
             proc_stdout, proc_stderr = proc.communicate(None)
             rc = proc.returncode
-            log.info(f"{self.__class__} return code, output, err: {rc}, '{proc_stdout}', {proc_stderr}")
+            log.info(f"{self.__class__} return code, err: {rc}, {proc_stderr}")
+            log.debug(f"{self.__class__} output: {rc}, {proc_stdout}")
             self._result = self._wrap_string(proc_stdout)
 
     def get_result_id(self):
@@ -319,13 +490,16 @@ class ProcessOutputProbe(Wrappable, Probe):
 PROBES = {
     'file_content': FileContentProbe,
     'process_output': ProcessOutputProbe,
-    'audit_rule_files_content': AuditDRuleFilesContentProbe
+    'audit_rule_file_content': AuditDRuleFileContentProbe,
+    'sysctl_file_content': SysctlDFileContentProbe,
+    'ini_file_content': INIFileContentProbe,
 }
 
 WRAPPERS = {
     'regex': RegEx,
     'json_seq': JsonSeq,
     'key_value': KeyValue,
+    'ini': INI,
 }
 
 def create_probe_from_dict(probe_dict):

@@ -32,13 +32,26 @@ tests:
   # - service_avahi-daemon_disabled
   # - service_squid_disabled
 
+  # Software updates
+  # TODO: checking for package is just boring - ensure_redhat_gpgkey_installed
+  - ensure_gpgcheck_never_disabled
+  - ensure_gpgcheck_globally_activated
+  # - ensure_gpgcheck_local_packages
+  # - security_patches_up_to_date
+  - dnf_automatic_security_updates_only # FIXME: file does not exists
+
+  # System security settings
+  - sysctl_kernel_randomize_va_space # FIXME: finish
+
   # SELinux
   - selinux_state_enforcing
+  - selinux_policytype_targeted
 
   # Filesystem and access rights integrity
-  # FIXME - verify_packaged_files
-  - find_unowned_files
-  - file_ownership_binary_dirs
+  - rpm_verify_hashes # FIXME: all packages
+  - rpm_verify_permissions # FIXME: all packages
+  - find_unowned_files # FIXME: all files
+  - file_ownership_binary_dirs # FIXME: all files
 
   # Audit
   - audit_rules_execution_setsebool

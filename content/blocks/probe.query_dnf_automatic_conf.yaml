@@ -1,0 +1,6 @@
+title: Read DNF Automatic config file in $paths
+kind: file_content
+properties:
+  paths: ['/etc/dnf/automatic.conf']
+wrapper:
+  ini: {}

@@ -159,6 +159,55 @@ def test_file_content_probe_etc_os_release():
             }
         ]
 
+def test_file_content_probe_yum_repos_ini_wrapper():
+    probe_dict = {
+        'id': 'test_fc_etc_os',
+        'title': 'Get file content from data/yum.repos.d/*',
+        'type': 'probe',
+        'kind': 'file_content',
+        'properties': {
+            'paths': ["data/yum.repos.d/*"]
+        },
+        'wrapper': {
+            'ini': {}
+        }
+    }
+    p = Block.create_from_dict(probe_dict)
+    assert p is not None
+    p()
+    assert p._result == [{'content': {'updates': {'countme': '1',
+                                                  'enabled': '1',
+                                                  'gpgcheck': '1',
+                                                  'gpgkey': 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-$releasever-$basearch',
+                                                  'metadata_expire': '6h',
+                                                  'metalink': 'https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch',
+                                                  'name': 'Fedora $releasever - $basearch - Updates',
+                                                  'repo_gpgcheck': '0',
+                                                  'skip_if_unavailable': 'False',
+                                                  'type': 'rpm'}},
+                          'file': 'data/yum.repos.d/fedora-updates.repo'},
+                         {'content': {'fedora': {'countme': '1',
+                                                 'enabled': '1',
+                                                 'gpgcheck': '0',
+                                                 'gpgkey': 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-$releasever-$basearch',
+                                                 'metadata_expire': '7d',
+                                                 'metalink': 'https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch',
+                                                 'name': 'Fedora $releasever - $basearch',
+                                                 'repo_gpgcheck': '0',
+                                                 'skip_if_unavailable': 'False',
+                                                 'type': 'rpm'},
+                                      'fedora-debuginfo': {'enabled': '0',
+                                                           'gpgcheck': '1',
+                                                           'gpgkey': 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-$releasever-$basearch',
+                                                           'metadata_expire': '7d',
+                                                           'metalink': 'https://mirrors.fedoraproject.org/metalink?repo=fedora-debug-$releasever&arch=$basearch',
+                                                           'name': 'Fedora $releasever - $basearch - '
+                                                                   'Debug',
+                                                           'repo_gpgcheck': '0',
+                                                           'skip_if_unavailable': 'False',
+                                                           'type': 'rpm'}},
+                          'file': 'data/yum.repos.d/fedora.repo'}]
+
 def test_file_content_probe_result_true_json():
     probe_dict = {
         'id': 'test_fc_rtjs',
@@ -172,8 +221,8 @@ def test_file_content_probe_result_true_json():
     p = Block.create_from_dict(probe_dict)
     assert p is not None
     p()
-    assert p._result == [{'content': {'result': True}, 'file': 'data/result_true.json'},
-                         {'content': {'result': False}, 'file': 'data/result_false.json'}]
+    assert p._result == [{'content': {'result': False}, 'file': 'data/result_false.json'},
+                         {'content': {'result': True}, 'file': 'data/result_true.json'}]
 
 def test_file_content_probe_result_true_json_sudo():
     probe_dict = {
@@ -189,15 +238,15 @@ def test_file_content_probe_result_true_json_sudo():
     p = Block.create_from_dict(probe_dict)
     assert p is not None
     p()
-    assert p._result == [{'content': {'result': True}, 'file': 'data/result_true.json'},
-                         {'content': {'result': False}, 'file': 'data/result_false.json'}]
+    assert p._result == [{'content': {'result': False}, 'file': 'data/result_false.json'},
+                         {'content': {'result': True}, 'file': 'data/result_true.json'}]
 
 def test_auditd_probe():
     probe_dict = {
         'id': 'test_ad',
         'title': '...',
         'type': 'probe',
-        'kind': 'audit_rule_files_content',
+        'kind': 'audit_rule_file_content',
         'properties': {
             'path': 'data/rules.d/*'
         }
@@ -285,7 +334,7 @@ def test_auditd_probe_single():
         'id': 'test_ad_ar',
         'title': '...',
         'type': 'probe',
-        'kind': 'audit_rule_files_content',
+        'kind': 'audit_rule_file_content',
         'properties': {
             'path': 'data/audit.rules'
         }
@@ -298,3 +347,47 @@ def test_auditd_probe_single():
                                     'list_action': 'task,never',
                                     'origin': {'file': 'data/audit.rules:5'},
                                     'status': {'correct': True}}]}
+
+def test_sysctl_probe():
+    probe_dict = {
+        'id': 'test_sctl',
+        'title': '...',
+        'type': 'probe',
+        'kind': 'sysctl_file_content',
+        'properties': {
+            'path': [
+                'data/sysctl.d/*.conf',
+                'data/sysctl.conf'
+            ]
+        }
+    }
+    p = Block.create_from_dict(probe_dict)
+    assert p is not None
+    p()
+    assert p._result == {'variables': [{'exclude': [],
+                                        'file': 'data/sysctl.d/50-coredump.conf:1',
+                                        'silent': False,
+                                        'value': '12',
+                                        'variable': 'kernel/core_pipe_limit'},
+                                       {'exclude': [],
+                                        'file': 'data/sysctl.d/99-sysctl.conf:11',
+                                        'silent': False,
+                                        'value': '2',
+                                        'variable': 'kernel/randomize_va_space'},
+                                       {'exclude': [],
+                                        'file': 'data/sysctl.d/99-sysctl.conf:12',
+                                        'silent': False,
+                                        'value': '14',
+                                        'variable': 'kernel/core_pipe_limit'},
+                                       {'exclude': [],
+                                        'file': 'data/sysctl.conf:11',
+                                        'silent': False,
+                                        'value': '2',
+                                        'variable': 'kernel/randomize_va_space'},
+                                       {'exclude': [],
+                                        'file': 'data/sysctl.conf:12',
+                                        'silent': False,
+                                        'value': '14',
+                                        'variable': 'kernel/core_pipe_limit'}]}
+
+

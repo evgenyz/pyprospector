@@ -1,4 +1,5 @@
 title: Package 'rear' is installed
+description: '...'
 blocks:
 - id: collect/query_package
   type: probe

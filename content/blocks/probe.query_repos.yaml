@@ -1,0 +1,6 @@
+title: Read YUM/DNF repos configuration from $paths
+kind: file_content
+properties:
+  paths: ['tests/data/yum.repos.d/*']
+wrapper:
+  ini: {}

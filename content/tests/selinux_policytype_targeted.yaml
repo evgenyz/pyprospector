@@ -1,0 +1,20 @@
+title: SELinux policy is set to 'targeted'
+description: '...'
+blocks:
+- id: collect/selinux_status
+  type: probe
+- id: not_targeted
+  title: If SELinux policy is not 'targeted' it is a finding
+  type: filter
+  kind: cel
+  sources:
+  - '@collect'
+  properties:
+    expression: >- 
+      {'result': arguments['status'][0]['policy'] != 'targeted', 'findings': arguments['status'][0]['policy'] != 'targeted'
+      ? 
+      [{'mode': arguments['status'][0]['policy']}] 
+      : 
+      []}
+    arguments:
+      status: '$1'

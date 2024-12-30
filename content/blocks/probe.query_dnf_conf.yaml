@@ -1,0 +1,6 @@
+title: Read DNF config file in $paths
+kind: file_content
+properties:
+  paths: ['tests/data/dnf.conf']
+wrapper:
+  ini: {}

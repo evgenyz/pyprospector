@@ -1,0 +1,9 @@
+title: Fetch sysctl configuration
+kind: sysctl_file_content
+properties:
+  path:
+  - "/usr/lib/sysctl.d/*.conf"
+  - "/usr/local/lib/sysctl.d/*.conf"
+  - "/run/sysctl.d/*.conf"
+  - "/etc/sysctl.d/*.conf"
+  - "/etc/sysctl.conf"

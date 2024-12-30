@@ -1,4 +1,5 @@
 title: Service 'telnet' is permanently disabled
+description: '...'
 blocks:
 - id: collect/systemd_units
   type: probe

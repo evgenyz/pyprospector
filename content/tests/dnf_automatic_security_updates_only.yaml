@@ -1,0 +1,15 @@
+title: The DNF Automatic is configured to install only security updates
+description: '...'
+blocks:
+- id: collect/query_dnf_automatic_conf
+  type: probe
+- id: upgrade_security
+  title: If upgrade_type option value is not 'security' it is a finding
+  type: filter
+  kind: cel
+  sources:
+    - '@collect'
+  properties:
+    expression: "{'result': (arguments.cfg.size() == 0) || (arguments.cfg[0].content.commands.upgrade_type != 'security'), 'findings': []}"
+    arguments:
+      cfg: '$1'

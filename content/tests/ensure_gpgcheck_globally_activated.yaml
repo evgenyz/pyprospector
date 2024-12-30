@@ -1,0 +1,15 @@
+title: The gpgcheck option should be globally enabled in DNF
+description: '...'
+blocks:
+- id: collect/query_dnf_conf
+  type: probe
+- id: filter
+  title: If gpgcheck option is disabled it is a finding
+  type: filter
+  kind: cel
+  sources:
+    - '@collect'
+  properties:
+    expression: "{'result': !(arguments.cfg[0].content.main.gpgcheck in ['True', '1', 'yes']), 'findings': []}"
+    arguments:
+      cfg: '$1'
