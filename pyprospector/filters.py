@@ -17,6 +17,7 @@ class Filter(Block):
         self._kind = filter_dict['kind']
         self._title = filter_dict['title']
         self._result = None
+        self._error = None
 
     @abstractmethod
     def __call__(self, *args, **kwargs):
@@ -31,7 +32,7 @@ class CELFilter(Filter):
         self._arguments = filter_dict['properties'].get('arguments', {})
 
     def __call__(self, *args, **kwargs):
-        log.info(f"Calling {self.__class__}: {self._expression}")
+        log.debug(f"Calling {self.__class__}: {self._expression}")
         args = {}
         for arg, value in self._arguments.items():
             if type(value) is str and value.startswith('$'):
@@ -81,6 +82,20 @@ def _cel_content_collate(entries: list) -> list:
                 entries[j]['content'].pop(k, None)
     return entries
 
+def _cel_permissions_match(permissions: str, mask: str) -> bool:
+    # -rwsr-xr-x, ???s??????
+    if len(permissions) != len(mask):
+        return False
+    for i, s in enumerate(permissions):
+        if mask[i] != '?':
+            if s != mask[i]:
+                return False
+    return True
+
+def _cel_mount_options_have(options: str, option: str) -> bool:
+    # rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=ascii,shortname=winnt,errors=remount-ro
+    return option in options.split(',')
+
 
 FILTERS = {
     'cel': CELFilter,
@@ -90,6 +105,8 @@ FUNCTIONS = {
     'audit_has_rule': _cel_audit_has_rule,
     'sysctl_has_value': _cel_sysctl_has_value,
     'content_collate': _cel_content_collate,
+    'permissions_match': _cel_permissions_match,
+    'mount_options_have': _cel_mount_options_have,
 }
 
 def create_filter_from_dict(filter_dict):

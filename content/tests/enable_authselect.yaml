@@ -1,0 +1,36 @@
+title: Check that authselect symlinks are set up properly
+description: |-
+  This check just mimics OVAL content and verifies that pam.d configuration files are symlinks to authselect-generated configs.
+blocks:
+  - id: collect/pamd_config_files
+    type: probe
+    parameters:
+      paths:
+        - /etc/pam.d/fingerprint-auth
+        - /etc/pam.d/password-auth
+        - /etc/pam.d/postlogin
+        - /etc/pam.d/smartcard-auth
+        - /etc/pam.d/system-auth
+        # - /usr/bin/ls
+  - id: improperly_linked_configs
+    title: Find incorrectly linked configs
+    type: filter
+    kind: cel
+    sources:
+      - "@collect"
+    properties:
+      expression: >-
+        arguments.collected_links.filter(l, l.link != arguments.reqired_links[l.config])
+      arguments:
+        collected_links: $1
+        reqired_links:
+          /etc/pam.d/fingerprint-auth: "/etc/authselect/fingerprint-auth"
+          /etc/pam.d/password-auth:    "/etc/authselect/password-auth"
+          /etc/pam.d/postlogin:        "/etc/authselect/postlogin"
+          /etc/pam.d/smartcard-auth:   "/etc/authselect/smartcard-auth"
+          /etc/pam.d/system-auth:      "/etc/authselect/system-auth"
+  - id: /any_exist
+    type: filter
+    sources:
+      - improperly_linked_configs
+

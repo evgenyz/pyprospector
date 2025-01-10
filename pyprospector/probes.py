@@ -17,13 +17,14 @@ from pyprospector.block import Block
 
 
 class Wrapper:
-    def __init__(self, params: dict):
+    def __init__(self, tpe, params: dict):
         self._params = params
+        self._type = tpe
 
     @classmethod
     def create_from_dict(cls, wrapper_dict: dict):
         wrapper_type, params = wrapper_dict.popitem()
-        return WRAPPERS.get(wrapper_type)(params)
+        return WRAPPERS.get(wrapper_type)(wrapper_type, params)
 
     @abstractmethod
     def wrap_file(self, f: typing.TextIO):
@@ -37,10 +38,13 @@ class Wrapper:
         for p, v in self._params.items():
             yield p, v
 
+    def __str__(self):
+        return self._type
+
 
 class KeyValue(Wrapper):
-    def __init__(self, params: dict):
-        super().__init__(params)
+    def __init__(self, tpe, params: dict):
+        super().__init__(tpe, params)
         self._delimiter = params.get('delimiter', "=")
         self._quotes = params.get('quotes', '\'\"')
         self._ignore_prefixes = params.get('ignore_prefixes', ['#'])
@@ -87,8 +91,8 @@ class KeyValue(Wrapper):
 
 
 class INI(Wrapper):
-    def __init__(self, params: dict):
-        super().__init__(params)
+    def __init__(self, tpe, params: dict):
+        super().__init__(tpe, params)
 
     def wrap_file(self, f: typing.IO):
         config = configparser.ConfigParser()
@@ -106,10 +110,11 @@ class INI(Wrapper):
 
 
 class RegEx(Wrapper):
-    def __init__(self, params: dict):
-        super().__init__(params)
+    def __init__(self, tpe, params: dict):
+        super().__init__(tpe, params)
         self._expression = params['expression']
-        self._flags = re.MULTILINE
+        self._plain = params.get('plain', False)
+        self._flags = re.MULTILINE #re.NOFLAG
         flags = params.get('flags', '').lower()
         if 'm' in flags:
             self._flags |= re.MULTILINE
@@ -121,19 +126,24 @@ class RegEx(Wrapper):
         return list(self.wrap_line(content))
 
     def wrap_string(self, string: str):
-        log.info(f"Wrapping (string) with Regex expression '{self._expression}'")
+        log.debug(f"Wrapping (string) with Regex expression '{self._expression}'")
         return list(self.wrap_line(string))
 
     def wrap_line(self, string: str):
         for m in re.finditer(self._expression, string, self._flags):
-            d = m.groupdict()
-            # FIXME: The CEL implementation fails to import None values into the context
-            yield dict(map(lambda kv: (kv[0], '' if kv[1] is None else kv[1]), d.items()))
+            if not self._plain:
+                d = m.groupdict()
+                # FIXME: The CEL implementation fails to import None values into the context
+                yield dict(map(lambda kv: (kv[0], '' if kv[1] is None else kv[1]), d.items()))
+            else:
+                d = m.groups()
+                for i in d:
+                    yield i
 
 
 class JsonSeq(Wrapper):
-    def __init__(self, params: dict):
-        super().__init__(params)
+    def __init__(self, tpe, params: dict):
+        super().__init__(tpe, params)
         self._stringify = params.get('stringify', False)
 
     def wrap_file(self, f: typing.TextIO):
@@ -164,7 +174,7 @@ class Wrappable:
     def _wrap_string(self, string: str):
         if self._wrapper is not None:
             return self._wrapper.wrap_string(string)
-        return json.loads(string)
+        return json.loads(string) if string else []
 
 
 class Probe(Block):
@@ -177,23 +187,39 @@ class Probe(Block):
         self._encoding = probe_dict.get('encoding', None)
         self._result = None
         self._error = None
+        self._executor = None
 
     @abstractmethod
     def __call__(self, *args, **kwargs):
         pass
 
     @contextmanager
+    def _exec(self, cmd: list, encoding=None):
+        if self._executor is not None:
+            proc = self._executor.exec(cmd, encoding, self._sudo)
+            yield proc
+        else:
+            print(f"Calling command: {' '.join(cmd)}")
+            log.debug(f"Calling command: {' '.join(cmd)}")
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              stdin=subprocess.PIPE, text=True, encoding=encoding)
+            yield proc
+
+    @contextmanager
     def _open(self, fn: str):
-        if self._sudo:
-            cmd = ['/usr/bin/pkexec', '--keep-cwd', '/usr/bin/cat', fn]
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True)
+        with self._exec(['/usr/bin/cat', fn]) as proc:
             res = proc.stdout
             yield res
-            proc.wait()
-        else:
-            res = open(fn)
-            yield res
-            res.close()
+
+    def _glob(self, paths: list[str]) -> list[str]:
+        # FIXME: Bash-specific
+        #paths_gen = "\"compgen -G '" + ' '.join(paths) + "'\""
+        paths_gen = "compgen -G '" + ' '.join(paths) + "'"
+        with self._exec(['/usr/bin/sh', '-c', paths_gen]) as proc:
+            for line in proc.stdout.readlines():
+                log.debug(f"Glob line: {line}")
+                yield str.strip(line)
 
 
 class FileContentProbe(Wrappable, Probe):
@@ -202,12 +228,13 @@ class FileContentProbe(Wrappable, Probe):
         self._parameters = probe_dict.get('parameters', {})
         self._paths = probe_dict['properties']['paths']
 
-    def __call__(self, *args, **kwargs):
-        log.info(f"Calling {self.__class__}: {self._paths}")
+    def __call__(self, executor=None, *args, **kwargs):
+        self._executor = executor
+        log.debug(f"Calling {self.__class__}: {self._paths}")
 
         res = []
         for path in self._paths:
-            for fn in sorted(glob.iglob(path)):
+            for fn in sorted(self._glob([path])):
                 with self._open(fn) as f:
                     log.debug(f"Opened file '{fn}'")
                     res.append({
@@ -216,10 +243,10 @@ class FileContentProbe(Wrappable, Probe):
                     })
 
         self._result = res
-        log.info(f"{self.__class__} result, output: {res}")
+        log.debug(f"{self.__class__} result, output: {res}")
 
     def get_result_id(self):
-        return str(self.__class__) + str(self._parameters)
+        return str(self.__class__) + repr(self._parameters) + repr(self._properties)
 
 
 class INIFileContentProbe(Probe):
@@ -228,13 +255,14 @@ class INIFileContentProbe(Probe):
         self._parameters = probe_dict.get('parameters', {})
         self._paths = probe_dict['properties']['paths']
 
-    def __call__(self, *args, **kwargs):
-        log.info(f"Calling {self.__class__}: {self._paths}")
+    def __call__(self, executor=None, *args, **kwargs):
+        self._executor = executor
+        log.debug(f"Calling {self.__class__}: {self._paths}")
 
         files = []
         config_res = configparser.ConfigParser(defaults={})
         for path in self._paths:
-            for fn in glob.iglob(path):
+            for fn in self._glob(path):
                 with self._open(fn) as f:
                     config = configparser.ConfigParser()
                     config.read_file(f)
@@ -263,7 +291,7 @@ class INIFileContentProbe(Probe):
         log.debug(f"{self.__class__} result: {result_res}")
 
     def get_result_id(self):
-        return str(self.__class__) + str(self._parameters)
+        return str(self.__class__) + repr(self._parameters) + repr(self._properties)
 
 
 class AuditDRuleFileContentProbe(Probe):
@@ -300,7 +328,7 @@ class AuditDRuleFileContentProbe(Probe):
             }
         }
 
-    def _read_rules(self, f: typing.TextIO, result: dict):
+    def _read_rules(self, f: typing.TextIO, fn: str, result: dict):
         l_no = 0
         for line in f.readlines():
             l_no += 1
@@ -311,12 +339,12 @@ class AuditDRuleFileContentProbe(Probe):
                 continue
 
             if l == '-D':
-                self._mark_rules_as_deleted(result['rules'], f'{f.name}:{l_no}')
+                self._mark_rules_as_deleted(result['rules'], f'{fn}:{l_no}')
                 continue
 
             lp = self._get_rule_element_pairs(l)
 
-            rule = self._make_rule(lp, f'{f.name}:{l_no}')
+            rule = self._make_rule(lp, f'{fn}:{l_no}')
 
             syscal_pos = l.find(' -S')
             arch_pos = l.find(' -F arch=')
@@ -324,7 +352,7 @@ class AuditDRuleFileContentProbe(Probe):
                 if arch_pos > syscal_pos:
                     rule['status'] = {'correct': False,
                                       'problem': {'field': '-S precedes -F arch=',
-                                                  'file': f'{f.name}:{l_no}'}}
+                                                  'file': f'{fn}:{l_no}'}}
 
             if lp[0].startswith('-a '):
                 result['rules'].append(rule)
@@ -335,17 +363,18 @@ class AuditDRuleFileContentProbe(Probe):
 
             result['config'].append(lp)
 
-    def __call__(self, *args, **kwargs):
-        log.info(f"Calling {self.__class__}: {self._path}")
+    def __call__(self, executor=None, *args, **kwargs):
+        self._executor = executor
+        log.debug(f"Calling {self.__class__}: {self._path}")
 
         res = {
             'rules': [],
             'config': []
         }
-        for fn in sorted(glob.glob(self._path)):
-            log.info(f"Loading file '{fn}'")
+        for fn in sorted(self._glob([self._path])):
+            log.debug(f"Loading file '{fn}'")
             with self._open(fn) as f:
-                self._read_rules(f, res)
+                self._read_rules(f, fn, res)
 
         self._result = res
 
@@ -375,7 +404,7 @@ class SysctlDFileContentProbe(Probe):
                 if variable not in r['exclude']:
                     r['exclude'].append(variable)
 
-    def _read_variables(self, f, res):
+    def _read_variables(self, f, fn, res):
         l_no = 0
         for line in f.readlines():
             l_no += 1
@@ -397,7 +426,7 @@ class SysctlDFileContentProbe(Probe):
                 'variable': self._normalize_key(variable),
                 'value': value,
                 'silent': silent,
-                'file': f'{f.name}:{l_no}',
+                'file': f'{fn}:{l_no}',
                 'exclude': [],
             }
 
@@ -408,8 +437,9 @@ class SysctlDFileContentProbe(Probe):
         confs = [conf for conf in confs if not conf.endswith(bn)] + [fn]
         return confs
 
-    def __call__(self, *args, **kwargs):
-        log.info(f"Calling {self.__class__}: {self._path}")
+    def __call__(self, executor=None, *args, **kwargs):
+        self._executor = executor
+        log.debug(f"Calling {self.__class__}: {self._path}")
 
         res = {
             'variables': []
@@ -417,13 +447,13 @@ class SysctlDFileContentProbe(Probe):
 
         confs = []
         for globs in self._path:
-            for fn in sorted(glob.glob(globs)):
+            for fn in sorted(self._glob([globs])):
                 confs = self._build_conf_set(confs, fn)
 
         for fn in confs:
-            log.info(f"Loading file '{fn}'")
+            log.debug(f"Loading file '{fn}'")
             with self._open(fn) as f:
-                self._read_variables(f, res)
+                self._read_variables(f, fn, res)
 
         self._result = res
 
@@ -434,6 +464,7 @@ class ProcessOutputProbe(Wrappable, Probe):
         self._parameters = probe_dict.get('parameters', {})
         self._executable = probe_dict['properties']['executable']
         self._arguments = probe_dict['properties']['arguments']
+        self._rc_ok = probe_dict['properties'].get('rc_ok', [0])
         self.resolve_parameters()
 
     def resolve_parameters(self):
@@ -463,28 +494,35 @@ class ProcessOutputProbe(Wrappable, Probe):
                 for res_el in l:
                     self._arguments.insert(i, str(res_el))
 
-    def __call__(self, *args, **kwargs):
-        log.info(f"Calling {self.__class__}: {self._executable} {repr(self._arguments)}")
+    def __call__(self, executor=None, *args, **kwargs):
+        self._executor = executor
+        log.debug(f"Calling {self.__class__}: {self._executable} {repr(self._arguments)}")
 
         self.resolve_source_parameters()
 
         cmd = [self._executable] + self._arguments
 
-        if self._sudo:
-            cmd = ['/usr/bin/pkexec', '--keep-cwd'] + cmd
-
-        log.info(f"Command: {' '.join(cmd)}")
-        with subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              stdin=subprocess.PIPE, text=True, encoding=self._encoding) as proc:
+        # log.info(f"Command: {' '.join(cmd)}")
+        with self._exec(cmd, encoding=self._encoding) as proc:
             proc_stdout, proc_stderr = proc.communicate(None)
             rc = proc.returncode
-            log.info(f"{self.__class__} return code, err: {rc}, {proc_stderr}")
+            log.debug(f"{self.__class__} return code, err: {rc}, {proc_stderr}")
             log.debug(f"{self.__class__} output: {rc}, {proc_stdout}")
-            self._result = self._wrap_string(proc_stdout)
+            if rc not in self._rc_ok:
+                self._error = {
+                    'result': True,
+                    'return_code': rc,
+                    'stderr': proc_stderr,
+                    'stdout': proc_stdout,
+                    'findings': None
+                }
+                self._result = None
+            else:
+                self._result = self._wrap_string(proc_stdout)
+                self._error = None
 
     def get_result_id(self):
-        return str(self.__class__) + str(self._parameters)
+        return str(self.__class__) + repr(self._parameters) + repr(self._properties)
 
 
 PROBES = {

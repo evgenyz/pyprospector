@@ -16,7 +16,8 @@ blocks:
     type: probe
     kind: audit_rule_file_content
     properties:
-      path: tests/data/rules.d/*
+      path: /etc/audit/rules.d/*
+    sudo: True
   - id: find_rules
     title: '...'
     type: filter

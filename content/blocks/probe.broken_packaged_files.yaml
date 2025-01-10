@@ -9,6 +9,9 @@ properties:
     - bolt
     - libvirt-daemon-driver-qemu
     - scap-security-guide
+    - libdnf5
+    - avahi
+  rc_ok: [0, 1]
 wrapper:
   regex:
     expression: "^(?P<verify_bits>[SM5UGT.?]{9})\\s+(?P<type>[\\w\\s])\\s+(?P<name>.+)$"

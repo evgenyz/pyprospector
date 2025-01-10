@@ -1,0 +1,6 @@
+title: An content is a finding
+kind: cel
+properties:
+  expression: "{'result': size(arguments.objects.filter(o, size(o.content) > 0)) > 0, 'findings': arguments.objects.filter(o, size(o.content) > 0)}"
+  arguments:
+    objects: "$1"

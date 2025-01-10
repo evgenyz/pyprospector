@@ -11,9 +11,11 @@ blocks:
   - '@collect'
   properties:
     expression: >- 
-      {'result': arguments['status'][0]['current_mode'] != 'enforcing', 'findings': arguments['status'][0]['current_mode'] != 'enforcing' 
+      {
+      'result': arguments.status[0]['current_mode'] != 'enforcing', 
+      'findings': arguments.status[0]['current_mode'] != 'enforcing' 
       ? 
-      [{'mode': arguments['status'][0]['current_mode']}] 
+      [{'mode': arguments.status[0]['current_mode']}] 
       : 
       []}
     arguments:

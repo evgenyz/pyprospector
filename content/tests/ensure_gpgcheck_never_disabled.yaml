@@ -10,7 +10,8 @@ blocks:
   sources:
     - '@collect'
   properties:
-    expression: arguments.repos.filter(r, r.content.map(section, r.content[section].gpgcheck != '1').exists(v, v))
+    expression: >-
+      arguments.repos.filter(r, r.content.map(section, has(r.content[section].gpgcheck) ? r.content[section].gpgcheck != '1' : false).exists(v, v))
     arguments:
       repos: '$1'
 - id: sections_with_gpgcheck_disabled
@@ -25,7 +26,7 @@ blocks:
       'findings': arguments.repos.map(r, 
       {'file': r.file, 
       'sections': r.content.map(section, 
-      {'section': section, 'gpgcheck': r.content[section].gpgcheck}).filter(s, s.gpgcheck != '1')
+      {'section': section, 'gpgcheck': has(section.gpgcheck) ? r.content[section].gpgcheck : 0}).filter(s, s.gpgcheck != '1')
       })}
     arguments:
       repos: '$1'

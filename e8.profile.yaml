@@ -22,9 +22,9 @@ selections:
 
   ### Remove/Install packages
   - package_talk_removed
-  #- package_talk-server_removed
-  #- package_ypbind_removed
-  #- package_telnet_removed
+  # - package_talk-server_removed
+  # - package_ypbind_removed
+  # - package_telnet_removed
   # - package_telnet-server_removed
   # - package_rsh_removed
   # - package_rsh-server_removed
@@ -87,8 +87,8 @@ selections:
   - no_empty_passwords
 
   ### Partitioning
-  - mount_option_dev_shm_nodev
-  - mount_option_dev_shm_nosuid
+  # - mount_option_dev_shm_nodev
+  # - mount_option_dev_shm_nosuid
   - mount_option_dev_shm_noexec
 
   ### Network
@@ -97,8 +97,8 @@ selections:
   ### Admin privileges
   - accounts_no_uid_except_zero
   - sudo_remove_nopasswd
-  - sudo_remove_no_authenticate
-  - sudo_require_authentication
+  # - sudo_remove_no_authenticate
+  # - sudo_require_authentication
 
   ### Audit
   - var_auditd_flush=incremental_async
@@ -133,14 +133,14 @@ selections:
   ### Secure access
   - sshd_use_directory_configuration
   - sshd_disable_root_login
-  - sshd_disable_gssapi_auth
-  - sshd_print_last_log
-  - sshd_do_not_permit_user_env
-  - sshd_disable_rhosts
-  - sshd_set_loglevel_info
-  - sshd_disable_empty_passwords
-  - sshd_disable_user_known_hosts
-  - sshd_enable_strictmodes
+  # - sshd_disable_gssapi_auth
+  # - sshd_print_last_log
+  # - sshd_do_not_permit_user_env
+  # - sshd_disable_rhosts
+  # - sshd_set_loglevel_info
+  # - sshd_disable_empty_passwords
+  # - sshd_disable_user_known_hosts
+  # - sshd_enable_strictmodes
 
   # See also: https://www.cyber.gov.au/acsc/view-all-content/guidance/asd-approved-cryptographic-algorithms
   - var_system_crypto_policy=default_nosha1

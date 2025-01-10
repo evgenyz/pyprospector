@@ -26,6 +26,8 @@ class Block(CreatableFromJSON):
         self._raw_src = copy.deepcopy(block_dict)
         self._sources = block_dict.get('sources', [])
         self._properties = block_dict.get('properties', [])
+        self._result = None
+        self._elapsed = 0
 
     def __repr__(self):
         return f'{self.__class__}: {self.id}, sources: {repr(self.sources)}'

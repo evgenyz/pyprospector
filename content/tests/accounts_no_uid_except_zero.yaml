@@ -1,0 +1,31 @@
+title: Verify Only Root Has UID 0
+description: |-
+  An account has root authority if it has a UID of 0. Multiple accounts
+  with a UID of 0 afford more opportunity for potential intruders to
+  guess a password for a privileged account. Proper configuration of
+  sudo is recommended to afford multiple system administrators
+  access to root privileges in an accountable manner.
+blocks:
+  - id: collect_users
+    title: Collect users from /etc/passwd
+    type: probe
+    kind: file_content
+    properties:
+      paths: ['/etc/passwd']
+    wrapper:
+      regex:
+        expression: "^(?P<name>[^:]*):(?P<password>[^:]*):(?P<UID>[^:]*):(?P<GID>[^:]*):(?P<GECOS>[^:]*):(?P<directory>[^:]*):(?P<shell>[^:]*)$"
+  - id: find_non_root_uid_zero
+    title: If any user other than root has UID 0, it is a finding
+    type: filter
+    kind: cel
+    sources:
+      - collect_users
+    properties:
+      expression: >-
+        {
+        'result': size(arguments.passwd[0].content.filter(u, u.UID == '0' && u.name != 'root')) > 0,
+        'findings': arguments.passwd[0].content.filter(u, u.UID == '0' && u.name != 'root')
+        }
+      arguments:
+        passwd: $1

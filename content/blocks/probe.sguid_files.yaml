@@ -1,0 +1,14 @@
+title: List SGID files
+kind: process_output
+properties:
+  executable: /usr/bin/find
+  arguments:
+    - /
+    - -perm
+    - /u=s,g=s
+    - -printf
+    - "\x1E{\"file\": \"%p\", \"permissions\": \"%M\"}\n"
+  rc_ok: [0, 1]
+sudo: true
+wrapper:
+  json_seq: {}

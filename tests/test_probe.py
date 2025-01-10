@@ -139,7 +139,8 @@ def test_file_content_probe_etc_os_release():
         },
         'wrapper': {
             'regex': {
-                'expression': '^(?P<name>[^=]+?)=["]?(?P<value>[^"]*?)["]?$'
+                'expression': '^(?P<name>[^=]+?)=["]?(?P<value>[^"]*?)["]?$',
+                'flags': 'M'
             }
         }
     }

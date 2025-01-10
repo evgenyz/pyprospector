@@ -31,7 +31,12 @@ blocks:
   - broken_files_list
   properties:
     executable: /usr/bin/rpm
-    arguments: ['-qf', '$1', '--qf', '\{"package": "%{name}", "files": \[ ""[,"%{filenames}"] \]\}\n']
+    arguments:
+      - -qf
+      - $1
+      - --qf
+      - '\{"package": "%{name}", "files": \[""[, "%{filenames}"]\]\}\n'
+    rc_ok: [0, 1]
   wrapper:
     json_seq: {}
   encoding: unicode_escape

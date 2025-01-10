@@ -18,5 +18,5 @@ def test_plan(test_po_echo_cel_result):
         'foo': 'bar'
     }
 
-    e = Executor()
+    e = Executor('')
     p.execute(e)

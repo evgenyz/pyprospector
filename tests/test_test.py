@@ -6,7 +6,7 @@ def test_test(test_po_echo_cel_result):
 
     assert len(t._blocks) == 2
 
-    e = Executor()
+    e = Executor('')
     e(t)
 
     assert t._result == {'result': True}

@@ -1,4 +1,4 @@
-title: 'List files not owned by root (within all paths in $$paths, default: ''/'')'
+title: List files not owned by root
 kind: process_output
 parameters:
   paths:
@@ -6,12 +6,13 @@ parameters:
 properties:
   executable: /usr/bin/find
   arguments:
-  - -L
-  - $$paths
-  - '!'
-  - -user
-  - root
-  - -printf
-  - "\x1E{\"file\": \"%p\"}\n"
+    - -L
+    - $$paths
+    - '!'
+    - -user
+    - root
+    - -printf
+    - "\x1E{\"file\": \"%p\"}\n"
+  rc_ok: [0, 1]
 wrapper:
   json_seq: {}

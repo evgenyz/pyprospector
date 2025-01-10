@@ -6,4 +6,8 @@ time ./build || {
 	exit 1
 }
 cd ..
-time ./prospector content/artifacts/e8.json -r e8.md.html #-t rpm_verify_permissions
+time ./prospector content/artifacts/e8.json \
+ -r e8.md.html \
+ -T container://fedora_latest \
+# -T ssh://192.168.122.109 \
+# -t accounts_no_uid_except_zero \

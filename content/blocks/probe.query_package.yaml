@@ -9,6 +9,7 @@ properties:
     - "$package"
     - "--qf"
     - "\"%{name} %{evr}\\n\""
+  rc_ok: [0, 1]
 wrapper:
   regex:
     expression: "^(package\\s(?P<absent>\\S+)\\s+is\\snot\\sinstalled|(?P<installed>\\S+)\\s(?P<version>\\S+))$"

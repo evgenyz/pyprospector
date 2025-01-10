@@ -1,0 +1,28 @@
+title: Check that authselect is enabled
+description: |-
+  Verify that <tt>authselect</tt> is enabled by running
+  <pre>authselect current</pre>
+  If authselect is enabled on the system, the output should show the ID of the profile which is currently in use.
+blocks:
+  - id: collect_status
+    title: Fetch current authselect profile
+    type: probe
+    kind: process_output
+    properties:
+      executable: /usr/bin/authselect
+      arguments:
+        - current
+    wrapper:
+      regex:
+        expression: "Profile ID: (?P<profile>\\w+)"
+        flags: MS
+  - id: check_profile_name
+    title: If authselect has no profile enabled, it is a finding
+    type: filter
+    kind: cel
+    sources:
+      - collect_status
+    properties:
+      expression: "{'result': arguments.status[0].profile == '', 'findings': []}"
+      arguments:
+        status: $1

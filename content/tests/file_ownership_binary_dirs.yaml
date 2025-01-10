@@ -9,7 +9,6 @@ description: |
       /usr/local/sbin
       /usr/sbin</pre>
   All files in these directories should be owned by the root user.
-ocil: "$ sudo find -L /bin /sbin /usr/bin /usr/sbin /usr/libexec /usr/local/bin /usr/local/sbin ! -user root -exec ls -l {} \\;"
 blocks:
   - id: collect/files_unowned_by_root
     type: probe

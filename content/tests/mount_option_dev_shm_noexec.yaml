@@ -1,0 +1,29 @@
+title: Add noexec Option to /dev/shm
+description: |-
+  The /dev/shm filesystem should be configured to be mounted with mount option noexec.
+blocks:
+  - id: fetch_fstab_fs_config
+    title: Fetch filesystem information
+    type: probe
+    kind: process_output
+    properties:
+      executable: /usr/bin/findmnt
+      arguments:
+        - /dev/shm
+        - --fstab
+        - --json
+      rc_ok: [0, 1]
+  - id: mount_option_present
+    title: If the filesystem does not have noexec option configured or the fstab entry is missing, it is a finding
+    type: filter
+    kind: cel
+    sources:
+      - fetch_fstab_fs_config
+    properties:
+      expression: >-
+        {
+        'result': !has(arguments.fs.filesystems) || size(arguments.fs.filesystems.filter(f, !mount_options_have(f.options, 'noexec'))) > 0,
+        'findings': has(arguments.fs.filesystems) ? arguments.fs.filesystems.filter(f, !mount_options_have(f.options, 'noexec')) : []
+        }
+      arguments:
+        fs: $1

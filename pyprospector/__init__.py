@@ -1,9 +1,12 @@
 import json
+import subprocess
+from contextlib import contextmanager
 from typing import TextIO
 
 from pyprospector.block import Block
 from pyprospector.common import CreatableFromJSON
 from pprint import pp
+from urllib.parse import urlparse
 
 import logging
 
@@ -39,30 +42,91 @@ class Test(CreatableFromJSON):
         return found == len(ids)
 
     def __call__(self, executor=None, *args, **kwargs):
+        executor.print(f"Executing test {self.id}: ")
         for blk in self._blocks:
+            executor.printnnl(f"--> {blk.id}: ")
             if executor is not None:
                 result = executor.get_cached_result(blk)
                 if result is not None:
                     blk._result = result
                     self._result = result
+                    log.debug(f"Using cached result for {blk.id}")
                     continue
-            blk()
-            self._result = blk._result
+            blk(executor)
+            if blk._result != None:
+                self._result = blk._result
+                executor.put_cached_result(blk)
+                executor.print("OK")
+            else:
+                self._result = blk._error
+                executor.print("ERROR")
+                break
+        if self._result is not None:
+            executor.print(json.dumps(self._result, indent=2))
+            executor.print(f"{'XXX FAIL' if self._result['result'] else '=== PASSED' }")
+        else:
+            executor.print(f"{'*** ERROR'}")
+        executor.print(f"-------------------------------------------------------------")
 
 
 class Executor:
-    def __init__(self):
+    def __init__(self, target: str, silent=True):
+        self._silent = silent
         self._cache = {}
-        pass
+        self._target = None if not target else urlparse(target)
+        log.debug(f"Target {repr(self._target)}")
+
+    def print(self, message: str):
+        if not self._silent:
+            print(message)
+
+    def printnnl(self, message: str):
+        if not self._silent:
+            print(message, end='')
 
     def get_cached_result(self, blk: Block):
-        result = self._cache.get(blk.get_result_id(), None)
-        if result is not None:
-            log.info("Got cached result!")
+        rid = blk.get_result_id()
+        log.debug(f"CACHE:GET: Result ID: {rid}")
+        if rid is not None:
+            result = self._cache.get(rid, None)
+            if result is not None:
+                log.debug("CACHE:GET: Got cached result!")
+                return result
+
+    def put_cached_result(self, blk: Block):
+        rid = blk.get_result_id()
+        log.debug(f"CACHE:PUT: Result ID: {rid}")
+        if rid is not None:
+             self._cache[rid] = blk._result
 
     def __call__(self, *tests: Test, **kwargs):
         for test in tests:
             test(self)
+
+    def exec(self, cmd: list, encoding=None, sudo=False):
+        if self._target is not None:
+            if self._target.scheme == 'container':
+                cmd = ['/usr/bin/podman', 'exec', self._target.netloc] + cmd
+            elif self._target.scheme == 'ssh':
+                if sudo:
+                    cmd = ['sudo'] + cmd
+                if cmd[0] == '/usr/bin/sh' and cmd[1] == '-c':
+                    # FIXME This is UGLY! Needs better escaping everywhere.
+                    cmd = ['/usr/bin/ssh', self._target.netloc] + [' '.join(cmd[:2]) + ' "' + cmd[2] + '"']
+                else:
+                    cmd = ['/usr/bin/ssh', self._target.netloc] + [' '.join(cmd)]
+            else:
+                # TODO: We can't be here
+                pass
+        else:
+            if sudo:
+                cmd = ['/usr/bin/pkexec', '--keep-cwd'] + cmd
+
+        log.debug(f"Executing command: {' '.join(cmd)}")
+        log.debug(f"Executing command (repr): {repr(cmd)}")
+        return subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                stdin=subprocess.PIPE, text=True, encoding=encoding)
 
 
 # Croquis
@@ -102,7 +166,7 @@ class Plan(CreatableFromJSON):
         for test in self._tests:
             jd['tests'].append({
                 'id': test.id,
-                'result': test._blocks[-1]._result
+                'result': test._result #test._blocks[-1]._result
             })
         print(json.dumps(jd, indent=2))
 
@@ -127,17 +191,24 @@ class Plan(CreatableFromJSON):
                 f.write(f"| **Type/Kind** | **{blk._type}/{blk._kind}** |\n")
                 for p, v in blk._properties.items():
                     f.write(f"| {p} | `{v}` |\n")
-                #if isinstance(blk, Wrappable):
-                #    f.write(f"| **Wrapper** | |\n")
-                #    if blk._wrapper is not None:
-                #        for p, v in blk._wrapper:
-                #            f.write(f"| {p} | {v.replace("|", "&#124;")} |\n")
+                if isinstance(blk, Wrappable):
+                    f.write(f"| **Wrapper** | {blk._wrapper} |\n")
+                    if blk._wrapper is not None:
+                        for p, v in blk._wrapper:
+                            f.write(f"| {p} | `{v}` |\n")
                 f.write("\n")
 
                 f.write("<details>\n")
-                f.write("   <summary><b>Output</b></summary>\n")
+                f.write("   <summary><b>Result</b></summary>\n")
                 f.write(f"```json\n"
                         f"{json.dumps(blk._result, indent=2)}\n"
+                        f"```\n")
+                f.write("</details>\n\n")
+
+                f.write("<details>\n")
+                f.write("   <summary><b>Error</b></summary>\n")
+                f.write(f"```json\n"
+                        f"{json.dumps(blk._error, indent=2)}\n"
                         f"```\n")
                 f.write("</details>\n\n")
 
@@ -148,6 +219,19 @@ class Plan(CreatableFromJSON):
                         f"```\n")
                 f.write("</details>\n\n")
 
+            if test._result is not None:
+                if test._result['result']:
+                    f.write(f"!!! ERROR: Failed\n")
+                    f.write("   <details>\n")
+                    f.write("   <summary><b>Findings</b></summary>\n")
+                    f.write(f"   ```json\n"
+                            f"   {json.dumps(test._result['findings'], indent=2)}\n"
+                            f"   ```\n")
+                    f.write("   </details>\n\n")
+                else:
+                    f.write(f"!!! TIP\n    Passed\n\n")
+            else:
+                f.write(f"{'!!! WARNING\n    Error\n\n'}")
 
         f.write('<!-- Markdeep: -->'
                 '<style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospaced}</style>'

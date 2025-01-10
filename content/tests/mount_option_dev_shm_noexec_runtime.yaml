@@ -1,0 +1,28 @@
+title: Add noexec Option to /dev/shm (RUNTIME)
+description: |-
+  The /dev/shm filesystem should be mounted with mount option noexec.
+blocks:
+  - id: fetch_fs_info
+    title: Fetch filesystem information
+    type: probe
+    kind: process_output
+    properties:
+      executable: /usr/bin/findmnt
+      arguments:
+        - /dev/shm
+        - --json
+      rc_ok: [0, 1]
+  - id: mount_option_present
+    title: If the filesystem does not have noexec option, it is a finding
+    type: filter
+    kind: cel
+    sources:
+      - fetch_fs_info
+    properties:
+      expression: >-
+        {
+        'result': size(arguments.fs.filesystems.filter(f, !mount_options_have(f.options, 'noexec'))) > 0,
+        'findings': arguments.fs.filesystems.filter(f, !mount_options_have(f.options, 'noexec'))
+        }
+      arguments:
+        fs: $1

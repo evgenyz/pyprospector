@@ -10,6 +10,6 @@ blocks:
   sources:
     - '@collect'
   properties:
-    expression: "{'result': !(arguments.cfg[0].content.main.gpgcheck in ['True', '1', 'yes']), 'findings': []}"
+    expression: "{'result': !has(arguments.cfg[0].content.main.gpgcheck) || !(arguments.cfg[0].content.main.gpgcheck in ['True', '1', 'yes']), 'findings': []}"
     arguments:
       cfg: '$1'

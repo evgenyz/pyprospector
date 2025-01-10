@@ -13,3 +13,18 @@ blocks:
     expression: "sysctl_has_value(arguments.conf, 'kernel/randomize_va_space')"
     arguments:
       conf: '$1'
+- id: compose_result
+  title: ...
+  type: filter
+  kind: cel
+  sources:
+    - 'filter'
+  properties:
+    expression: >-
+      {
+      'result': size(arguments.conf) == 0 || arguments.conf[size(arguments.conf) - 1].value != '2',
+      'findings': size(arguments.conf) == 0 ? [] :
+      arguments.conf[size(arguments.conf) - 1].value != '2' ? arguments.conf[size(arguments.conf) - 1] : [] 
+      }
+    arguments:
+      conf: '$1'

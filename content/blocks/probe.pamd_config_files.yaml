@@ -1,0 +1,13 @@
+title: Collect pam.d config files and resolve symlinks
+kind: process_output
+parameters:
+  paths: []
+properties:
+  executable: /usr/bin/ls
+  arguments:
+  - -l
+  - $$paths
+wrapper:
+  regex:
+    # lrwxrwxrwx. 1 root root 32 Oct 29 19:06 /etc/pam.d/fingerprint-auth -> /etc/authselect/fingerprint-auth
+    expression: "^.+?\\s(?P<config>\\S+)( -> (?P<link>\\S+))?$"
