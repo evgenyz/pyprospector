@@ -1,7 +1,6 @@
 from abc import *
 
 import logging
-from copy import deepcopy
 from fnmatch import fnmatch
 
 log = logging.getLogger(__name__)

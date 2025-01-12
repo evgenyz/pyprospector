@@ -1,6 +1,6 @@
 import json
 import subprocess
-from contextlib import contextmanager
+
 from typing import TextIO
 
 from pyprospector.block import Block
@@ -22,6 +22,7 @@ class Test(CreatableFromJSON):
         self._description = test_dict['description']
         self._blocks = []
         self._result = None
+        self._error = None
 
         for blk_dict in test_dict['blocks']:
             blk = Block.create_from_dict(blk_dict)
@@ -53,18 +54,19 @@ class Test(CreatableFromJSON):
                     log.debug(f"Using cached result for {blk.id}")
                     continue
             blk(executor)
-            if blk._result != None:
+            if blk._result is not None:
                 self._result = blk._result
                 executor.put_cached_result(blk)
                 executor.print("OK")
             else:
-                self._result = blk._error
+                self._error = blk._error
                 executor.print("ERROR")
                 break
         if self._result is not None:
             executor.print(json.dumps(self._result, indent=2))
             executor.print(f"{'XXX FAIL' if self._result['result'] else '=== PASSED' }")
         else:
+            executor.print(json.dumps(self._error, indent=2))
             executor.print(f"{'*** ERROR'}")
         executor.print(f"-------------------------------------------------------------")
 
@@ -149,10 +151,10 @@ class Plan(CreatableFromJSON):
 
     def print_results(self):
         for test in self._tests:
-            for block in test._blocks:
+            for blk in test._blocks:
                 print("-----------------------------------------------------------")
-                print(f"- {block.id} ")
-                pp(block._result)
+                print(f"- {blk.id} ")
+                pp(blk._result)
             else:
                 print("///////////////////////////////////////////////////////////")
 
@@ -183,8 +185,16 @@ class Plan(CreatableFromJSON):
             f.write(f"{test._description}\n")
 
             for blk in test._blocks:
+                mark = ""
                 f.write(f"{blk._title}\n")
                 f.write(f"{'-'*len(blk._title)}\n\n")
+
+                f.write("<details>\n")
+                f.write("   <summary>JSON</summary>\n")
+                f.write(f"```json\n"
+                        f"{json.dumps(blk._raw_src, indent=2)}\n"
+                        f"```\n")
+                f.write("</details>\n\n")
 
                 f.write(f"| ID | {blk.id} |\n")
                 f.write(f"| --- | --- |\n")
@@ -198,26 +208,26 @@ class Plan(CreatableFromJSON):
                             f.write(f"| {p} | `{v}` |\n")
                 f.write("\n")
 
-                f.write("<details>\n")
-                f.write("   <summary><b>Result</b></summary>\n")
-                f.write(f"```json\n"
-                        f"{json.dumps(blk._result, indent=2)}\n"
-                        f"```\n")
-                f.write("</details>\n\n")
+                if blk._result is not None:
+                    f.write("<details>\n")
+                    f.write("   <summary><b>Result</b></summary>\n")
+                    f.write(f"```json\n"
+                            f"{json.dumps(blk._result, indent=2)}\n"
+                            f"```\n")
+                    f.write("</details>\n\n")
 
-                f.write("<details>\n")
-                f.write("   <summary><b>Error</b></summary>\n")
-                f.write(f"```json\n"
-                        f"{json.dumps(blk._error, indent=2)}\n"
-                        f"```\n")
-                f.write("</details>\n\n")
+                if blk._error is not None:
+                    f.write("<details>\n")
+                    f.write("   <summary><b>Error</b></summary>\n")
+                    f.write(f"```json\n"
+                            f"{json.dumps(blk._error, indent=2)}\n"
+                            f"```\n")
+                    f.write("</details>\n\n")
 
-                f.write("<details>\n")
-                f.write("   <summary>Raw source</summary>\n")
-                f.write(f"```json\n"
-                        f"{json.dumps(blk._raw_src, indent=2)}\n"
-                        f"```\n")
-                f.write("</details>\n\n")
+                if blk._result is None and blk._error is None:
+                    f.write("⚠ Skipped\n\n")
+
+            f.write("\n")
 
             if test._result is not None:
                 if test._result['result']:
@@ -232,6 +242,12 @@ class Plan(CreatableFromJSON):
                     f.write(f"!!! TIP\n    Passed\n\n")
             else:
                 f.write(f"{'!!! WARNING\n    Error\n\n'}")
+                f.write("   <details>\n")
+                f.write("   <summary><b>Details</b></summary>\n")
+                f.write(f"   ```json\n"
+                        f"   {json.dumps(test._error, indent=2)}\n"
+                        f"   ```\n")
+                f.write("   </details>\n\n")
 
         f.write('<!-- Markdeep: -->'
                 '<style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospaced}</style>'

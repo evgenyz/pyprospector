@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import json
 
 from pyprospector.common import CreatableFromJSON
 
@@ -9,13 +8,12 @@ from pyprospector.common import CreatableFromJSON
 class Block(CreatableFromJSON):
     @classmethod
     def create_from_dict(cls, block_dict):
-        import pyprospector.probes
-        import pyprospector.filters
-
         block_type = block_dict['type']
         if block_type == 'probe':
+            import pyprospector.probes
             return pyprospector.probes.create_probe_from_dict(block_dict)
         elif block_type == 'filter':
+            import pyprospector.filters
             return pyprospector.filters.create_filter_from_dict(block_dict)
         raise ValueError(f'Invalid block type "{block_type}", available block types: probe, filter.')
 

@@ -10,7 +10,6 @@ from fnmatch import fnmatch
 
 log = logging.getLogger(__name__)
 import subprocess
-import glob
 import re
 
 from pyprospector.block import Block
@@ -199,7 +198,6 @@ class Probe(Block):
             proc = self._executor.exec(cmd, encoding, self._sudo)
             yield proc
         else:
-            print(f"Calling command: {' '.join(cmd)}")
             log.debug(f"Calling command: {' '.join(cmd)}")
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,

@@ -1,4 +1,4 @@
-title: List SGID files
+title: List SGID and SUID files
 kind: process_output
 properties:
   executable: /usr/bin/find

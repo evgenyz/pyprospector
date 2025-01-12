@@ -2,11 +2,11 @@
 
 cd content
 time ./build || {
-	echo "Unable to build content"
+	echo "Unable to build content!"
 	exit 1
 }
 cd ..
-time ./prospector content/artifacts/e8.json \
+time ./prospector content/artifacts/e8.json "$@" \
  -r e8.md.html \
  -T container://fedora_latest \
 # -T ssh://192.168.122.109 \
