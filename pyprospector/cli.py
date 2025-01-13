@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def get_options():
     parser = argparse.ArgumentParser(prog='prospector')
-    parser.add_argument("plan", type=pathlib.Path)
+    parser.add_argument("plan", nargs='+', type=pathlib.Path)
     parser.add_argument(
         "-r",
         "--report",
@@ -27,7 +27,7 @@ def get_options():
         "-T",
         "--target",
         action="store",
-        help="Target, supported: '' (default), 'container://containername', 'ssh://user@hostname'",
+        help="Target, supported: '' (default, local), 'container://container_name', 'ssh://user@hostname'",
         default="",
         required=False,
     )
@@ -47,8 +47,7 @@ def main():
     options = get_options()
     logging.basicConfig(level=logging.INFO - options.verbose * 10)
     logger.debug('Started')
-    with open(options.plan, 'r') as f:
-        plan = Plan.create_from_file(f)
+    plan = Plan.create_from_files(options.plan)
     if options.test_id:
         plan.drop_other_tests(options.test_id)
     exe = Executor(options.target, options.json)

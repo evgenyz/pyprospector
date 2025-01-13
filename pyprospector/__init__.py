@@ -1,4 +1,5 @@
 import json
+import pathlib
 import subprocess
 
 from typing import TextIO
@@ -133,15 +134,37 @@ class Executor:
 
 # Croquis
 class Plan(CreatableFromJSON):
+    @classmethod
+    def create_from_files(cls, files: list[pathlib.Path]):
+        plan = None
+        for fn in files:
+            with open(fn, 'r') as f:
+                if plan is None:
+                    plan = Plan.create_from_file(f)
+                else:
+                    plan.add_from_file(f)
+        return plan
+
     def __init__(self, plan_dict):
         super().__init__(plan_dict)
-        self._title = plan_dict['title']
-        self._description = plan_dict['description']
+
         self._tests = []
         self._variables = {}
-        for tst in plan_dict['tests']:
-            self._tests.append(Test(tst))
-        self._variables.update(plan_dict.get('variables', {}))
+
+        # FIXME: this is silly
+        if 'tests' in plan_dict:
+            self._title = plan_dict['title']
+            self._description = plan_dict['description']
+            for tst in plan_dict['tests']:
+                self._tests.append(Test(tst))
+            self._variables.update(plan_dict.get('variables', {}))
+        elif 'blocks' in plan_dict:
+            self._title = 'None'
+            self._description = 'Arbitrary test set.'
+            self._tests.append(Test(plan_dict))
+
+    def add_test_from_file(self, f: TextIO):
+        self._tests.append(Test.create_from_file(f))
 
     def drop_other_tests(self, test_id: str):
         self._tests = [test for test in self._tests if test_id == test.id]
@@ -162,7 +185,6 @@ class Plan(CreatableFromJSON):
         jd = {
             'id': self.id,
             'title': self._title,
-            'description': self._description,
             'tests': []
         }
         for test in self._tests:
@@ -175,14 +197,35 @@ class Plan(CreatableFromJSON):
     def write_report(self, f: TextIO):
         f.write('<meta charset="utf-8" emacsmode="-*- markdown -*-"><link rel="stylesheet" href="markdeep.css">\n')
 
-        f.write(f"**Evaluation Report**\n")
-        f.write(f"  {self._title}\n\n")
+        f.write(f"**{self._title}**\n\n")
         f.write(f"  {self._description}\n\n")
 
         for test in self._tests:
             f.write(f"{test._title}\n")
             f.write(f"{'='*len(test._title)}\n")
-            f.write(f"{test._description}\n")
+
+            f.write(f"{test._description}\n\n")
+
+            if test._result is not None:
+                if test._result['result']:
+                    f.write(f"!!! ERROR: Failed\n")
+                    f.write("   <details>\n")
+                    f.write("   <summary><b>Findings</b></summary>\n")
+                    f.write(f"   ```json\n"
+                            f"{json.dumps(test._result['findings'], indent=4)}\n"
+                            f"   ```\n")
+                    f.write("   </details>\n\n")
+                else:
+                    f.write(f"!!! TIP\n    Passed\n\n")
+            else:
+                f.write(f"{'!!! WARNING\n    Error\n\n'}")
+                f.write("   <details>\n")
+                f.write("   <summary><b>Details</b></summary>\n")
+                f.write(f"   ```json\n"
+                        f"{json.dumps(test._error, indent=4)}\n"
+                        f"   ```\n")
+                f.write("   </details>\n\n")
+
 
             for blk in test._blocks:
                 mark = ""
@@ -190,15 +233,14 @@ class Plan(CreatableFromJSON):
                 f.write(f"{'-'*len(blk._title)}\n\n")
 
                 f.write("<details>\n")
-                f.write("   <summary>JSON</summary>\n")
-                f.write(f"```json\n"
-                        f"{json.dumps(blk._raw_src, indent=2)}\n"
-                        f"```\n")
+                f.write(f"   <summary>**{blk.id}**</summary>\n")
+                f.write(f"   ```json\n"
+                        f"{json.dumps(blk._raw_src, indent=4)}\n"
+                        f"   ```\n")
                 f.write("</details>\n\n")
 
-                f.write(f"| ID | {blk.id} |\n")
-                f.write(f"| --- | --- |\n")
                 f.write(f"| **Type/Kind** | **{blk._type}/{blk._kind}** |\n")
+                f.write(f"| --- | --- |\n")
                 for p, v in blk._properties.items():
                     f.write(f"| {p} | `{v}` |\n")
                 if isinstance(blk, Wrappable):
@@ -211,43 +253,21 @@ class Plan(CreatableFromJSON):
                 if blk._result is not None:
                     f.write("<details>\n")
                     f.write("   <summary><b>Result</b></summary>\n")
-                    f.write(f"```json\n"
-                            f"{json.dumps(blk._result, indent=2)}\n"
-                            f"```\n")
+                    f.write(f"   ```json\n"
+                            f"{json.dumps(blk._result, indent=4)}\n"
+                            f"   ```\n")
                     f.write("</details>\n\n")
 
                 if blk._error is not None:
                     f.write("<details>\n")
                     f.write("   <summary><b>Error</b></summary>\n")
-                    f.write(f"```json\n"
-                            f"{json.dumps(blk._error, indent=2)}\n"
-                            f"```\n")
+                    f.write(f"   ```json\n"
+                            f"{json.dumps(blk._error, indent=4)}\n"
+                            f"   ```\n")
                     f.write("</details>\n\n")
 
                 if blk._result is None and blk._error is None:
                     f.write("⚠ Skipped\n\n")
-
-            f.write("\n")
-
-            if test._result is not None:
-                if test._result['result']:
-                    f.write(f"!!! ERROR: Failed\n")
-                    f.write("   <details>\n")
-                    f.write("   <summary><b>Findings</b></summary>\n")
-                    f.write(f"   ```json\n"
-                            f"   {json.dumps(test._result['findings'], indent=2)}\n"
-                            f"   ```\n")
-                    f.write("   </details>\n\n")
-                else:
-                    f.write(f"!!! TIP\n    Passed\n\n")
-            else:
-                f.write(f"{'!!! WARNING\n    Error\n\n'}")
-                f.write("   <details>\n")
-                f.write("   <summary><b>Details</b></summary>\n")
-                f.write(f"   ```json\n"
-                        f"   {json.dumps(test._error, indent=2)}\n"
-                        f"   ```\n")
-                f.write("   </details>\n\n")
 
         f.write('<!-- Markdeep: -->'
                 '<style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospaced}</style>'

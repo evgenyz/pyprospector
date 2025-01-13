@@ -1,5 +1,10 @@
 title: Package 'talk' is absent
-description: '...'
+
+description: |-
+  The talk software presents a security risk as it uses unencrypted protocols
+  for communications. Removing the <tt>talk</tt> package decreases the
+  risk of the accidental (or intentional) activation of talk client program.
+
 blocks:
 - id: collect/query_package
   type: probe

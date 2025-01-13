@@ -1,5 +1,9 @@
 title: Package 'rear' is installed
-description: '...'
+
+description: |-
+  Package rear contains the Relax-and-Recover (ReaR) utility. ReaR produces a bootable
+  image of a system and restores from backup using this image.
+
 blocks:
 - id: collect/query_package
   type: probe

@@ -1,6 +1,8 @@
 title: Add noexec Option to /dev/shm
+
 description: |-
   The /dev/shm filesystem should be configured to be mounted with mount option noexec.
+
 blocks:
   - id: fetch_fstab_fs_config
     title: Fetch filesystem information
