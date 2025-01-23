@@ -1,14 +1,19 @@
-title: Verify that System Executables Have Root Ownership
-description: |
+title: Verify that system executables have root ownership
+
+description: |-
   System executables are stored in the following directories by default:
-      /bin
-      /sbin
-      /usr/bin
-      /usr/libexec
-      /usr/local/bin
-      /usr/local/sbin
-      /usr/sbin</pre>
+  
+  ```
+  /bin
+  /sbin
+  /usr/bin
+  /usr/sbin
+  /usr/libexec
+  /usr/local/bin
+  /usr/local/sbin
+  ```
   All files in these directories should be owned by the root user.
+
 blocks:
   - id: collect/files_unowned_by_root
     type: probe
@@ -21,7 +26,7 @@ blocks:
         - "/usr/libexec"
         - "/usr/local/bin"
         - "/usr/local/sbin"
-        - "/var/cache"
+        # - "/var/cache"
   - id: /any_exist
     type: filter
     sources:

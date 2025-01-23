@@ -1,8 +1,14 @@
-title: Verify packaged files
-description: '...'
+title: Verify permissions of the packaged files
+
+description: |-
+  Permissions on system binaries and configuration files that are too generous could allow an
+  unauthorized user to gain privileges that they should not have. The permissions set by the
+  vendor should be maintained. Any deviations from this baseline should be investigated.
+
 blocks:
 - id: collect/broken_packaged_files
   type: probe
+
 - id: broken_but_configs
   title: '...'
   type: filter
@@ -13,22 +19,24 @@ blocks:
     expression: arguments.objects.filter(el, el.type != 'c')
     arguments:
       objects: '$1'
+
 - id: broken_files_list
   title: '...'
   type: filter
   kind: cel
   sources:
-  - 'broken_but_configs'
+    - 'broken_but_configs'
   properties:
     expression: arguments.objects.map(el, el.name)
     arguments:
       objects: '$1'
+
 - id: collect_broken_packages_names
   title: '...'
   type: probe
   kind: process_output
   sources:
-  - broken_files_list
+    - broken_files_list
   properties:
     executable: /usr/bin/rpm
     arguments:
@@ -40,13 +48,14 @@ blocks:
   wrapper:
     json_seq: {}
   encoding: unicode_escape
+
 - id: compose_findings
   title: '...'
   type: filter
   kind: cel
   sources:
-  - broken_but_configs
-  - collect_broken_packages_names
+    - broken_but_configs
+    - collect_broken_packages_names
   properties:
     expression: >-
       arguments.files.map(el, 
@@ -56,6 +65,7 @@ blocks:
     arguments:
       files: '$1'
       packages: '$2'
+
 - id: broken_hashes
   title: ...
   type: filter

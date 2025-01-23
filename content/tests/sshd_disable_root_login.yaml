@@ -1,0 +1,26 @@
+title: Disable SSH root login
+
+description: |-
+  The root user should never be allowed to login to a
+  system directly over a network.
+  
+  To disable root login via SSH, add or correct the following line in
+  SSH configuration:
+  
+  `PermitRootLogin no`
+
+blocks:
+  - id: find_permitrootlogin
+    title: Search for PermitRootLogin directive
+    type: probe
+    kind: file_content
+    properties:
+      paths: ['/etc/ssh/sshd_config', '/etc/ssh/sshd_config.d/*.conf']
+    sudo: true
+    wrapper:
+      regex:
+        expression: '^[\s]*(?P<directive>(?i:PermitRootLogin)[\s]+(?i:no))[\s]*$'
+  - id: /no_content_exist
+    type: filter
+    sources:
+      - find_permitrootlogin

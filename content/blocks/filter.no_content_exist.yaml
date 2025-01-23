@@ -1,0 +1,10 @@
+title: A non-existing content is a finding
+kind: cel
+properties:
+  expression: >-
+    {
+    'result': arguments.objects.filter(o, o.content.size() > 0).size() == 0, 
+    'findings': arguments.objects.filter(o, o.content.size() == 0)
+    }
+  arguments:
+    objects: "$1"

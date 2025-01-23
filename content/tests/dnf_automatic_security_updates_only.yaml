@@ -1,5 +1,10 @@
 title: The DNF Automatic is configured to install only security updates
-description: '...'
+
+description: |-
+  By default, `dnf-automatic` installs all available updates.
+  Reducing the amount of updated packages only to updates that were
+  issued as a part of a security advisory increases the system stability.
+
 blocks:
 - id: collect/query_dnf_automatic_conf
   type: probe

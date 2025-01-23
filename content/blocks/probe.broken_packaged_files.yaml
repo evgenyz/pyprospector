@@ -2,15 +2,14 @@ title: Verify files against RPM database and collect inconsistencies
 kind: process_output
 properties:
   executable: "/usr/bin/rpm"
-  # FIXME: we need to scan all of them
   arguments:
     - "-Va"
-    - colord
-    - bolt
-    - libvirt-daemon-driver-qemu
-    - scap-security-guide
-    - libdnf5
-    - avahi
+    # - colord
+    # - bolt
+    # - libvirt-daemon-driver-qemu
+    # - scap-security-guide
+    # - libdnf5
+    # - avahi
   rc_ok: [0, 1]
 wrapper:
   regex:

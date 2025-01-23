@@ -1,0 +1,43 @@
+title: Configure 'auditd' flush priority
+
+description: |-
+  The `auditd` service can be configured to
+  synchronously write audit event data to disk. Add or correct the following
+  line in `/etc/audit/auditd.conf` to ensure that audit event data is
+  fully synchronized with the log files on the disk:
+     
+  `flush = INCREMENTAL_ASYNC`
+
+blocks:
+  - id: collect/query_auditd_conf
+    type: probe
+
+  - id: find_value
+    title: Find the 'flush' option value
+    type: filter
+    kind: cel
+    sources:
+      - "@collect"
+    properties:
+      expression: >-
+        arguments.config.map(c, 
+        {'file': c.file, 'content': has(c.content.flush) ? {'flush': c.content.flush} : {'flush': null} }
+        )
+      arguments:
+        config: "$1"
+
+  - id: filter
+    title: If flush option is not equal 'incremental_async' it is a finding
+    type: filter
+    kind: cel
+    sources:
+      - find_value
+    properties:
+      expression: >-
+        {
+        'result': arguments.found_value.all(c, c.content.flush != arguments.wanted_value),
+        'findings': arguments.found_value.all(c, c.content.flush != arguments.wanted_value) ? [arguments.found_value] : []
+        }
+      arguments:
+        found_value: "$1"
+        wanted_value: "incremental_async"

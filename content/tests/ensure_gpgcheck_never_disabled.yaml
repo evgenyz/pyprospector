@@ -1,5 +1,11 @@
-title: The gpgcheck option should be enabled for all DNF/YUM repos
-description: '...'
+title: The 'gpgcheck' option should be enabled for all DNF/YUM repos
+
+description: |-
+  To ensure signature checking is not disabled for
+  any repos, remove any lines from files in `/etc/yum.repos.d` of the form: 
+  
+  `gpgcheck=0`
+
 blocks:
 - id: collect/query_repos
   type: probe

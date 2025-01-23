@@ -1,19 +1,15 @@
-title: Record any attempts to run 'setsebool'
+title: Record attempts to alter time through adjtimex
 
 description: |-
-  At a minimum, the audit system should collect any execution attempt
-  of the `setsebool` command for all users and root. If the auditd
-  daemon is configured to use the augenrules program to read audit rules
-  during daemon startup (the default), add the following lines to a file with suffix
-  `.rules` in the directory `/etc/audit/rules.d`:
+  If the `auditd` daemon is configured to use the
+  `augenrules` program to read audit rules during daemon startup (the
+  default), add the following line to a file with suffix `.rules` in the
+  directory `/etc/audit/rules.d`:
+  `-a always,exit -F arch=b32 -S adjtimex -F key=audit_time_rules`
   
-  `-a always,exit -F path=/usr/sbin/setsebool -F auid>=auid -F auid!=unset -F key=privileged`
+  If the system is 64 bit then also add the following line:
   
-  If the auditd daemon is configured to use theauditctl
-  utility to read audit rules during daemon startup, add the following lines to
-  /etc/audit/audit.rules file:
-  
-  `-a always,exit -F path=/usr/sbin/setsebool -F auid>=auid -F auid!=unset -F key=privileged`
+  `-a always,exit -F arch=b64 -S adjtimex -F key=audit_time_rules`
 
 blocks:
   - id: collect
@@ -31,16 +27,13 @@ blocks:
     sources:
       - collect
     properties:
-      expression: >- 
+      expression: >-
         audit_has_rule(arguments.config.rules, arguments.wanted_rule)
       arguments:
         config: "$1"
         wanted_rule:
          - ['-F arch=b64', '-F arch=b32']
-         - '-F path=/usr/sbin/setsebool'
-         - '-F perm=x'
-         - '-F auid>=1000'
-         - ['-F auid!=unset', '-F auid!=4294967295', '-F auid!=-1']
+         - '-S adjtimex'
 
   - id: filter
     title: If rule is not found for both b32 and b64 architectures it is a finding

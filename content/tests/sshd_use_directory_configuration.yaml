@@ -1,0 +1,22 @@
+title: Distribute the SSH Server configuration to multiple files in a config directory
+
+description: |-
+  Make sure to have the `Include /etc/ssh/sshd_config.d/*.conf` line in the `/etc/ssh/sshd_config` file.
+  Ideally, don't have any active configuration directives in that file, and distribute the service configuration
+  to several files in the `/etc/ssh/sshd_config.d` directory.
+
+blocks:
+  - id: find_include
+    title: Search for Include directive
+    type: probe
+    kind: file_content
+    properties:
+      paths: ['/etc/ssh/sshd_config']
+    sudo: true
+    wrapper:
+      regex:
+        expression: '^[\s]*(?P<directive>(?i:Include)[\s]+/etc/ssh/sshd_config\.d/\*\.conf)[\s]*$'
+  - id: /no_content_exist
+    type: filter
+    sources:
+      - find_include

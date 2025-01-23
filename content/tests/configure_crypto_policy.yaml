@@ -1,0 +1,40 @@
+title: Configure system cryptography policy
+
+description: |-
+  Centralized cryptographic policies simplify applying secure ciphers across an operating system and
+  the applications that run on that operating system. Use of weak or untested encryption algorithms
+  undermines the purposes of utilizing encryption to protect data.
+  
+  To configure the system cryptography policy, run the following command:
+  
+  `$ sudo update-crypto-policies --set default_nosha1`
+
+blocks:
+  - id: collect_policy_state_and_config
+    title: Collect the state and configuration of crypto policies
+    type: probe
+    kind: file_content
+    properties:
+      paths: ['/etc/crypto-policies/config', '/etc/crypto-policies/state/current']
+    wrapper:
+      regex:
+        expression: '^(?!#)(?P<policy>\S+)$'
+
+  - id: collect_config_and_state_mtime
+    title: Collect the state and configuration modification time
+    type: probe
+    kind: process_output
+    properties:
+      executable: /usr/bin/stat
+      arguments:
+        - --format
+        - '{"file": "%n", "modified": %Y}'
+        - /etc/crypto-policies/config
+        - /etc/crypto-policies/state/current
+    wrapper:
+      json_seq: {}
+
+  - id: /no_content_exist
+    type: filter
+    sources:
+      - collect_policy_state_and_config

@@ -1,5 +1,11 @@
 title: Service 'telnet' is permanently disabled
-description: '...'
+
+description: |-
+  The telnet protocol uses unencrypted network communication, which means that data from the
+  login session, including passwords and all other information transmitted during the session,
+  can be stolen by eavesdroppers on the network. The telnet protocol is also subject to
+  man-in-the-middle attacks.
+
 blocks:
 - id: collect/systemd_units
   type: probe

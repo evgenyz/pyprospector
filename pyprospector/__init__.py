@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import logging
 
-from pyprospector.probes import Wrappable
+from pyprospector.probes import Wrappable, Probe
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class Test(CreatableFromJSON):
                     blk._result = result
                     self._result = result
                     log.debug(f"Using cached result for {blk.id}")
+                    executor.print("OK (CACHED)")
                     continue
             blk(executor)
             if blk._result is not None:
@@ -248,6 +249,8 @@ class Plan(CreatableFromJSON):
                     if blk._wrapper is not None:
                         for p, v in blk._wrapper:
                             f.write(f"| {p} | `{v}` |\n")
+                if isinstance(blk, Probe):
+                    f.write(f"| Privileged | {"**Yes**" if blk._sudo else "No"} |\n")
                 f.write("\n")
 
                 if blk._result is not None:

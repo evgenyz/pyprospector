@@ -1,5 +1,11 @@
 title: SELinux is in 'enforcing' mode
-description: '...'
+
+description: |-
+  Setting the SELinux state to enforcing ensures SELinux is able to confine
+  potentially compromised processes to the security policy, which is designed to
+  prevent them from causing damage to the system or further elevating their
+  privileges.
+
 blocks:
 - id: collect/selinux_status
   type: probe

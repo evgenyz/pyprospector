@@ -1,19 +1,21 @@
-title: Record any attempts to run 'setsebool'
+title: Record attempts to alter logon and logout events (lastlog)
 
 description: |-
-  At a minimum, the audit system should collect any execution attempt
-  of the `setsebool` command for all users and root. If the auditd
-  daemon is configured to use the augenrules program to read audit rules
-  during daemon startup (the default), add the following lines to a file with suffix
-  `.rules` in the directory `/etc/audit/rules.d`:
+  The audit system already collects login information for all users
+  and root. If the `auditd` daemon is configured to use the
+  `augenrules` program to read audit rules during daemon startup (the
+  default), add the following lines to a file with suffix `.rules` in the
+  directory `/etc/audit/rules.d` in order to watch for attempted manual
+  edits of files involved in storing logon events:
   
-  `-a always,exit -F path=/usr/sbin/setsebool -F auid>=auid -F auid!=unset -F key=privileged`
+  `-F path=/var/log/lastlog -F perm=wa -F key=logins`
   
-  If the auditd daemon is configured to use theauditctl
+  If the `auditd` daemon is configured to use the `auditctl`
   utility to read audit rules during daemon startup, add the following lines to
-  /etc/audit/audit.rules file:
+  `/etc/audit/audit.rules` file in order to watch for unattempted manual
+  edits of files involved in storing logon events:
   
-  `-a always,exit -F path=/usr/sbin/setsebool -F auid>=auid -F auid!=unset -F key=privileged`
+  `-F path=/var/log/lastlog -F perm=wa -F key=logins`
 
 blocks:
   - id: collect
@@ -31,16 +33,14 @@ blocks:
     sources:
       - collect
     properties:
-      expression: >- 
+      expression: >-
         audit_has_rule(arguments.config.rules, arguments.wanted_rule)
       arguments:
         config: "$1"
         wanted_rule:
          - ['-F arch=b64', '-F arch=b32']
-         - '-F path=/usr/sbin/setsebool'
-         - '-F perm=x'
-         - '-F auid>=1000'
-         - ['-F auid!=unset', '-F auid!=4294967295', '-F auid!=-1']
+         - '-F path=/var/log/lastlog'
+         - ['-F perm=arwx', '-F perm=awx', '-F perm=aw']
 
   - id: filter
     title: If rule is not found for both b32 and b64 architectures it is a finding

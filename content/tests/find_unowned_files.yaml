@@ -1,10 +1,13 @@
-title: Find Unowned Files
-description: "..."
+title: Find unowned files
+
+description: |- 
+  ...
+
 blocks:
 - id: collect/unowned_files
   type: probe
   parameters:
-    path: /home/ekolesni/.cache/
+    path: /
 - id: /any_exist
   type: filter
   sources:

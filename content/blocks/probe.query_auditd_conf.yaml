@@ -1,0 +1,9 @@
+title: Read 'auditd' configuration
+kind: file_content
+properties:
+  paths: ['/etc/audit/auditd.conf']
+sudo: true
+wrapper:
+  key_value:
+    lowercase_values: true
+    lowercase_keys: true

@@ -1,6 +1,9 @@
-title: Check that authselect symlinks are set up properly
+title: Check that 'authselect' symlinks are set up properly
+
 description: |-
-  This check just mimics OVAL content and verifies that pam.d configuration files are symlinks to authselect-generated configs.
+  This check just mimics OVAL content and verifies that `pam.d` configuration 
+  files are symlinks to authselect-generated configs.
+
 blocks:
   - id: collect/pamd_config_files
     type: probe

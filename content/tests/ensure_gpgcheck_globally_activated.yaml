@@ -1,5 +1,14 @@
-title: The gpgcheck option should be globally enabled in DNF
-description: '...'
+title: The 'gpgcheck' option should be globally enabled in DNF
+
+description: |-
+  The `gpgcheck` option controls whether
+  RPM packages' signatures are always checked prior to installation.
+  To configure rpm to check package signatures before installing
+  them, ensure the following line appears in config file in
+  the `[main]` section:
+  
+  `gpgcheck=1`
+
 blocks:
 - id: collect/query_dnf_conf
   type: probe
@@ -10,6 +19,10 @@ blocks:
   sources:
     - '@collect'
   properties:
-    expression: "{'result': !has(arguments.cfg[0].content.main.gpgcheck) || !(arguments.cfg[0].content.main.gpgcheck in ['True', '1', 'yes']), 'findings': []}"
+    expression: >-
+      {
+      'result': !has(arguments.cfg[0].content.main.gpgcheck) || !(arguments.cfg[0].content.main.gpgcheck in ['True', '1', 'yes']), 
+      'findings': []
+      }
     arguments:
       cfg: '$1'

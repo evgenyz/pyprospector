@@ -1,7 +1,7 @@
-title: Add noexec Option to /dev/shm (RUNTIME)
+title: Add 'noexec' option to /dev/shm (RUNTIME)
 
 description: |-
-  The /dev/shm filesystem should be mounted with mount option noexec.
+  The `/dev/shm` filesystem should be mounted with mount option noexec.
 
 blocks:
   - id: fetch_fs_info

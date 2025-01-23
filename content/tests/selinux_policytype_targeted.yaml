@@ -1,5 +1,8 @@
 title: SELinux policy is set to 'targeted'
-description: '...'
+
+description: |-
+  Configure system to use the 'targeted' SELINUX policy.
+
 blocks:
 - id: collect/selinux_status
   type: probe

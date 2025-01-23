@@ -55,6 +55,13 @@ def _cel_sysctl_has_value(entries: dict, key: list) -> list:
             found.append(entry)
     return found
 
+def _cel_audit_has_value(entries: dict, key: list) -> list:
+    found = []
+    for entry in entries['variables']:
+        if fnmatch(entry['variable'], key) and key not in entry['exclude']:
+            found.append(entry)
+    return found
+
 def _cel_audit_has_rule(entries: list, fields: list) -> list:
     found = []
     for e in entries:
@@ -102,6 +109,7 @@ FILTERS = {
 
 FUNCTIONS = {
     'audit_has_rule': _cel_audit_has_rule,
+    'audit_has_value': _cel_audit_has_value,
     'sysctl_has_value': _cel_sysctl_has_value,
     'content_collate': _cel_content_collate,
     'permissions_match': _cel_permissions_match,

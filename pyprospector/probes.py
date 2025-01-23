@@ -48,6 +48,8 @@ class KeyValue(Wrapper):
         self._quotes = params.get('quotes', '\'\"')
         self._ignore_prefixes = params.get('ignore_prefixes', ['#'])
         self._trim_whitespace = params.get('trim_whitespace', True)
+        self._val_lc = params.get('lowercase_values', False)
+        self._key_lc = params.get('lowercase_keys', False)
 
     def wrap_file(self, f: typing.IO):
         res = {}
@@ -85,6 +87,10 @@ class KeyValue(Wrapper):
         if self._trim_whitespace:
             key = key.strip(' ')
             value = value.strip(' ')
+        if self._key_lc:
+            key = key.lower()
+        if self._val_lc:
+            value = value.lower()
 
         return key, value
 
@@ -125,17 +131,19 @@ class RegEx(Wrapper):
         return list(self.wrap_line(content))
 
     def wrap_string(self, string: str):
-        log.debug(f"Wrapping (string) with Regex expression '{self._expression}'")
         return list(self.wrap_line(string))
 
     def wrap_line(self, string: str):
+        log.debug(f"Wrapping (line) with Regex expression '{self._expression}': {string}")
         for m in re.finditer(self._expression, string, self._flags):
+            log.debug(f"---> m: {repr(m)}")
             if not self._plain:
                 d = m.groupdict()
                 # FIXME: The CEL implementation fails to import None values into the context
                 yield dict(map(lambda kv: (kv[0], '' if kv[1] is None else kv[1]), d.items()))
             else:
                 d = m.groups()
+                log.debug(f"---> groups: {repr(d)}")
                 for i in d:
                     yield i
 
@@ -311,6 +319,24 @@ class AuditDRuleFileContentProbe(Probe):
                 }
             }
 
+    def _normalize_fields(self, pairs: list) -> list:
+        res = []
+        for p in pairs:
+            pp = p.split(' ')
+            if pp[1].startswith('perm='):
+                kv = pp[1].split('=')
+                kv[1] = ''.join(sorted(kv[1]))
+                p = pp[0] + ' ' + kv[0] + '=' + kv[1]
+                res.append(p)
+                continue
+            if pp[0].startswith('-S'):
+                ss = pp[1].split(',')
+                for s in ss:
+                    res.append('-S ' + s)
+                continue
+            res.append(p)
+        return res
+
     def _make_rule(self, pairs: list, origin: str) -> dict:
         la = pairs[0].split(' ')[1]
         if la.startswith('always,') or la.startswith('never,'):
@@ -320,7 +346,7 @@ class AuditDRuleFileContentProbe(Probe):
                 'file': origin
             },
             'list_action': la,
-            'fields': pairs[1:],
+            'fields': self._normalize_fields(pairs[1:]),
             'status': {
                 'correct': True,
             }

@@ -1,10 +1,12 @@
-title: Verify Only Root Has UID 0
+title: Verify only root has UID 0
+
 description: |-
   An account has root authority if it has a UID of 0. Multiple accounts
   with a UID of 0 afford more opportunity for potential intruders to
   guess a password for a privileged account. Proper configuration of
   sudo is recommended to afford multiple system administrators
   access to root privileges in an accountable manner.
+
 blocks:
   - id: collect_users
     title: Collect users from /etc/passwd

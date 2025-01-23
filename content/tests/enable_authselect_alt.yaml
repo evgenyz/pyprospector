@@ -1,8 +1,12 @@
-title: Check that authselect is enabled
+title: Check that 'authselect' is enabled
+
 description: |-
-  Verify that <tt>authselect</tt> is enabled by running
-  <pre>authselect current</pre>
-  If authselect is enabled on the system, the output should show the ID of the profile which is currently in use.
+  Verify that `authselect` is enabled by running
+  
+  `authselect current`
+  
+  If `authselect` is enabled on the system, the output should show the ID of the profile which is currently in use.
+
 blocks:
   - id: collect_status
     title: Fetch current authselect profile

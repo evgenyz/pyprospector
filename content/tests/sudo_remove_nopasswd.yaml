@@ -1,0 +1,35 @@
+title: Ensure users re-authenticate for privilege escalation
+
+description: |-
+  The sudo `NOPASSWD` tag, when specified, allows a user to execute
+  commands using sudo without having to authenticate. This should be disabled
+  by making sure that the `NOPASSWD` tag does not exist in
+  `/etc/sudoers` configuration file or any sudo configuration snippets
+  in `/etc/sudoers.d/`.
+
+blocks:
+  - id: collect_nopasswd_sudoers
+    title: Collect sudoers configuration from from /etc/sudoers and /etc/sudoers.d/*
+    type: probe
+    kind: file_content
+    properties:
+      paths: ['/etc/sudoers', '/etc/sudoers.d/*']
+    sudo: True
+    wrapper:
+      regex:
+        expression: '^(?!#)(.*?[\s]+NOPASSWD[\s]*:.*?)$'
+        plain: True
+  - id: compose_results
+    title: 'Any sudoer user or group with NOPASSWD: tag is a finding'
+    type: filter
+    kind: cel
+    sources:
+      - collect_nopasswd_sudoers
+    properties:
+      expression: >-
+        {
+        'result': arguments.records.filter(r, r.content.size() > 0).size() > 0,
+        'findings': arguments.records.filter(r, r.content.size() > 0)
+        }
+      arguments:
+        records: '$1'
