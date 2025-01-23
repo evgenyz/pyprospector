@@ -9,14 +9,51 @@ description: |-
   
   `-a always,exit -F path=/usr/sbin/setsebool -F auid>=auid -F auid!=unset -F key=privileged`
   
-  If the auditd daemon is configured to use theauditctl
+  If the auditd daemon is configured to use the `auditctl`
   utility to read audit rules during daemon startup, add the following lines to
   /etc/audit/audit.rules file:
   
   `-a always,exit -F path=/usr/sbin/setsebool -F auid>=auid -F auid!=unset -F key=privileged`
 
 blocks:
-  - id: collect
+  - id: auditd_service/systemd_unit_properties
+    type: probe
+    parameters:
+      path: /usr/lib/systemd/system/auditd.service
+
+  - id: audit_rules_service/systemd_unit_properties
+    type: probe
+    parameters:
+      path: /usr/lib/systemd/system/audit-rules.service
+
+  - id: auditd_with_augenrules
+    title: Is auditd configured to use augenrules?
+    type: filter
+    kind: cel
+    sources:
+      - "@auditd_service"
+      - "@audit_rules_service"
+    properties:
+      expression: >-
+        has(arguments.auditd_service[0].content) && has(arguments.audit_rules_service[0].content)
+        ?
+        arguments.auditd_service[0].content.Requires == 'audit-rules.service' && 
+        arguments.audit_rules_service[0].content.ExecStart == '/usr/sbin/augenrules --load'
+        :
+        false
+      arguments:
+        auditd_service: "$1"
+        audit_rules_service: "$2"
+
+  - id: collect_rules
+    title: Collect rules from /etc/audit/audit.rules
+    type: probe
+    kind: audit_rule_file_content
+    properties:
+      path: /etc/audit/audit.rules
+    sudo: true
+
+  - id: collect_rules_d
     title: Collect rules from /etc/audit/rules.d/*
     type: probe
     kind: audit_rule_file_content
@@ -29,12 +66,17 @@ blocks:
     type: filter
     kind: cel
     sources:
-      - collect
+      - collect_rules_d
+      - collect_rules
+      - auditd_with_augenrules
     properties:
       expression: >- 
-        audit_has_rule(arguments.config.rules, arguments.wanted_rule)
+        audit_has_rule(arguments.auditd_with_augenrules ? arguments.rules_d.rules : arguments.rules.rules, 
+        arguments.wanted_rule)
       arguments:
-        config: "$1"
+        rules_d: "$1"
+        rules: "$2"
+        auditd_with_augenrules: "$3"
         wanted_rule:
          - ['-F arch=b64', '-F arch=b32']
          - '-F path=/usr/sbin/setsebool'

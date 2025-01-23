@@ -1,0 +1,8 @@
+title: Collect a systemd unit properties
+kind: file_content
+parameters:
+  path: foo
+properties:
+  paths: ['$path']
+wrapper:
+  key_value: {}

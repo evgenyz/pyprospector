@@ -12,7 +12,7 @@ blocks:
 - id: collect/sysctl_conf
   type: probe
 - id: filter
-  title: ...
+  title: Find kernel/randomize_va_space value
   type: filter
   kind: cel
   sources:
@@ -22,7 +22,7 @@ blocks:
     arguments:
       conf: '$1'
 - id: compose_result
-  title: ...
+  title: Compose results
   type: filter
   kind: cel
   sources:

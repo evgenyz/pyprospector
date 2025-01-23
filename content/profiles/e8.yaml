@@ -103,6 +103,7 @@ tests:
   # - audit_rules_execution_chcon
   # - audit_rules_execution_semanage
   - audit_rules_execution_setsebool # FIXME: finish?
+  - audit_rules_execution_setsebool_runtime # FIXME: finish?
   # - audit_rules_execution_setfiles
   # - audit_rules_execution_seunshare
   # - audit_rules_sysadmin_actions

@@ -1,4 +1,4 @@
 #!/bin/sh
 
-time sudo oscap xccdf eval --profile e8 --oval-results --results-arf ssg-fedora-arf.xml ssg-fedora-ds.xml
+time sudo oscap xccdf eval --profile e8 "$@" --oval-results --results-arf ssg-fedora-arf.xml ssg-fedora-ds.xml
 oscap-report ssg-fedora-arf.xml > ssg-fedora.html

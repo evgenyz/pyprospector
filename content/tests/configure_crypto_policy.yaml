@@ -34,7 +34,24 @@ blocks:
     wrapper:
       json_seq: {}
 
-  - id: /no_content_exist
+  - id: compose_result
+    title: Compose results
     type: filter
+    kind: cel
     sources:
       - collect_policy_state_and_config
+      - collect_config_and_state_mtime
+    properties:
+      expression: >-
+        {
+        'result': !arguments.state.all(s, s.content[0].policy == 'DEFAULT_NOSHA1') 
+        || arguments.mtime.filter(m, m.file == '/etc/crypto-policies/config')[0].modified > arguments.mtime.filter(m, m.file == '/etc/crypto-policies/state/current')[0].modified,
+        'findings': !arguments.state.all(s, s.content[0].policy == 'DEFAULT_NOSHA1') 
+        ?
+        arguments.state
+        :
+        ['Policy configuration is newer than state, configuration changes pending'] 
+        }
+      arguments:
+        state: '$1'
+        mtime: '$2'

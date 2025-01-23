@@ -213,12 +213,18 @@ class Probe(Block):
             yield proc
 
     @contextmanager
+    def _exec_open(self, cmd: list, encoding=None):
+        with self._exec(cmd, encoding=encoding) as proc:
+            res = proc.stdout
+            yield res
+
+    @contextmanager
     def _open(self, fn: str):
         with self._exec(['/usr/bin/cat', fn]) as proc:
             res = proc.stdout
             yield res
 
-    def _glob(self, paths: list[str]) -> list[str]:
+    def _glob(self, paths: list[str]):
         # FIXME: Bash-specific
         #paths_gen = "\"compgen -G '" + ' '.join(paths) + "'\""
         paths_gen = "compgen -G '" + ' '.join(paths) + "'"
@@ -233,6 +239,19 @@ class FileContentProbe(Wrappable, Probe):
         super().__init__(probe_dict)
         self._parameters = probe_dict.get('parameters', {})
         self._paths = probe_dict['properties']['paths']
+        self.resolve_parameters()
+
+    def resolve_parameters(self):
+        for param in self._parameters.keys():
+            if f'${param}' in self._paths:
+                i = self._paths.index(f'${param}')
+                self._paths[i] = self._parameters[param]
+            if f'$${param}' in self._paths:
+                i = self._paths.index(f'$${param}')
+                self._paths.pop(i)
+                self._parameters[param].reverse()
+                for param_el in self._parameters[param]:
+                    self._paths.insert(i, param_el)
 
     def __call__(self, executor=None, *args, **kwargs):
         self._executor = executor
@@ -300,24 +319,36 @@ class INIFileContentProbe(Probe):
         return str(self.__class__) + repr(self._parameters) + repr(self._properties)
 
 
-class AuditDRuleFileContentProbe(Probe):
-    def __init__(self, probe_dict):
-        super().__init__(probe_dict)
-        self._path = probe_dict['properties']['path']
+class AuditDRule:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._rules_unreacheable = False
 
     def _get_rule_element_pairs(self, rule_string: str):
         rl = rule_string.split(' ')
         # FIXME: Do we need to add a None or '' to even-out the list?
         return [' '.join([k, v]) for k, v in zip(rl[::2], rl[1::2])]
 
+    # FIXME: This is not how augenrules works!
     def _mark_rules_as_deleted(self, rules, origin: str):
         for r in rules:
-            r['status'] = {'correct':  False,
+            r['status'] = {
+                'correct':  False,
                 'problem': {
                     'file': origin,
                     'field': '-D'
                 }
             }
+
+    def _mark_rule_as_unreacheable(self, r, origin: str):
+        r['status'] = {
+            'correct':  False,
+            'problem': {
+                'file': origin,
+                'field': '-a task,never',
+                'reason': 'Shadows all rules after it'
+            }
+        }
 
     def _normalize_fields(self, pairs: list) -> list:
         res = []
@@ -363,12 +394,18 @@ class AuditDRuleFileContentProbe(Probe):
                 continue
 
             if l == '-D':
-                self._mark_rules_as_deleted(result['rules'], f'{fn}:{l_no}')
+                #self._mark_rules_as_deleted(result['rules'], f'{fn}:{l_no}')
                 continue
+
+            if l == '-a task,never' or l == '-a never,task':
+                self._rules_unreacheable = True
 
             lp = self._get_rule_element_pairs(l)
 
             rule = self._make_rule(lp, f'{fn}:{l_no}')
+
+            if self._rules_unreacheable:
+                self._mark_rule_as_unreacheable(rule, f'{fn}:{l_no}')
 
             syscal_pos = l.find(' -S')
             arch_pos = l.find(' -F arch=')
@@ -387,6 +424,12 @@ class AuditDRuleFileContentProbe(Probe):
 
             result['config'].append(lp)
 
+
+class AuditDRuleFileContentProbe(AuditDRule, Probe):
+    def __init__(self, probe_dict):
+        super().__init__(probe_dict)
+        self._path = probe_dict['properties']['path']
+
     def __call__(self, executor=None, *args, **kwargs):
         self._executor = executor
         log.debug(f"Calling {self.__class__}: {self._path}")
@@ -401,6 +444,37 @@ class AuditDRuleFileContentProbe(Probe):
                 self._read_rules(f, fn, res)
 
         self._result = res
+
+
+class AuditCtlOutputProbe(AuditDRule, Probe):
+    def __init__(self, probe_dict):
+        super().__init__(probe_dict)
+        self._parameters = {}
+        self._properties = {}
+        self._executable = '/usr/sbin/auditctl'
+        self._arguments = ['-l']
+        self._rc_ok = [0]
+        self._sudo = True
+
+    def __call__(self, executor=None, *args, **kwargs):
+        self._executor = executor
+        log.debug(f"Calling {self.__class__}: {self._executable} {repr(self._arguments)}")
+
+        res = {
+            'rules': [],
+            'config': []
+        }
+
+        cmd = [self._executable] + self._arguments
+
+        with self._exec_open(cmd, encoding=self._encoding) as f:
+            log.debug(f"Loading from '{repr(cmd)}'")
+            self._read_rules(f, 'auditctl', res)
+
+        self._result = res
+
+    def get_result_id(self):
+        return str(self.__class__) + repr(self._parameters) + repr(self._properties)
 
 
 class SysctlDFileContentProbe(Probe):
@@ -553,6 +627,7 @@ PROBES = {
     'file_content': FileContentProbe,
     'process_output': ProcessOutputProbe,
     'audit_rule_file_content': AuditDRuleFileContentProbe,
+    'auditctl_output': AuditCtlOutputProbe,
     'sysctl_file_content': SysctlDFileContentProbe,
     'ini_file_content': INIFileContentProbe,
 }
