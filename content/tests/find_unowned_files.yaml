@@ -18,8 +18,8 @@ blocks:
   properties:
     expression: >-
       result = {
-        "result": count(data.files) > 0,
-        "findings": data.files
+      "result": count(data.files) > 0,
+      "findings": data.files
       }
     arguments:
       files: '$1'
