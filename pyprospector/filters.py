@@ -1,3 +1,4 @@
+import json
 from abc import *
 
 import logging
@@ -5,6 +6,7 @@ from fnmatch import fnmatch
 
 log = logging.getLogger(__name__)
 from cel import evaluate, Context
+from regopy import Interpreter
 
 from pyprospector.block import Block
 
@@ -46,6 +48,32 @@ class CELFilter(Filter):
             context.add_function(n, f)
         context.update({'arguments': args})
         self._result = evaluate(self._expression, context)
+
+
+class REGOFilter(Filter):
+    def __init__(self, filter_dict):
+        super().__init__(filter_dict)
+        self._parameters = filter_dict.get('parameters', {})
+        self._expression = filter_dict['properties']['expression']
+        self._arguments = filter_dict['properties'].get('arguments', {})
+
+    def __call__(self, *args, **kwargs):
+        log.debug(f"Calling {self.__class__}: {self._expression}")
+        args = {}
+        for arg, value in self._arguments.items():
+            if type(value) is str and value.startswith('$'):
+                index = int(value[1:])
+                args[arg] = self._sources[index-1]._result
+            else:
+                args[arg] = value
+
+        log.debug(f"Evaluate with {repr({'arguments': args})}")
+
+        rego = Interpreter()
+        rego.add_data(args)
+        q = rego.query(self._expression)
+        res = q.binding('result').json()
+        self._result = json.loads(res)
 
 
 def _cel_sysctl_has_value(entries: dict, key: list) -> list:
@@ -105,6 +133,7 @@ def _cel_mount_options_have(options: str, option: str) -> bool:
 
 FILTERS = {
     'cel': CELFilter,
+    'rego': REGOFilter,
 }
 
 FUNCTIONS = {

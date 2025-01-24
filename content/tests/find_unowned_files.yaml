@@ -7,8 +7,19 @@ blocks:
 - id: collect/unowned_files
   type: probe
   parameters:
-    path: /
-- id: /any_exist
+    path: /tmp
+
+- id: filter
+  title: An unowned file is a finding
   type: filter
+  kind: rego
   sources:
-  - '@collect'
+    - '@collect'
+  properties:
+    expression: >-
+      result = {
+        "result": count(data.files) > 0,
+        "findings": data.files
+      }
+    arguments:
+      files: '$1'

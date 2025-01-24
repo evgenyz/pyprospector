@@ -5,9 +5,10 @@ parameters:
 properties:
   executable: /usr/bin/find
   arguments:
-  - /home/ekolesni/.cache/
+  - '$path'
   - -nouser
   - -printf
-  - "\x1E{\"file\": \"%p\"}\n"
+  - "\x1E{\"file\": \"%p\", \"owner\": \"%U:%G\"}\n"
+sudo: true
 wrapper:
   json_seq: {}

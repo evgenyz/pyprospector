@@ -53,7 +53,6 @@ tests:
   - rpm_verify_hashes
   - rpm_verify_permissions
   # - rpm_verify_ownership
-  # - find_unowned_files # TODO: all files, also not part of e8
   - file_permissions_unauthorized_sgid
   # - file_permissions_unauthorized_suid
   # - file_permissions_unauthorized_world_writable
@@ -128,3 +127,6 @@ tests:
   # Crypto
   - configure_crypto_policy
   # - configure_ssh_crypto_policy # TODO: Booooooooring!
+
+  # Extra
+  - find_unowned_files # TODO: looks in ~/.cache

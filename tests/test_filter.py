@@ -25,3 +25,53 @@ def test_cel_filter_map_transform():
     p = Block.create_from_dict(p_dict)
     p()
     assert p._result == [{'b': 2, 'n': 'N'}, {'b': 22, 'n': 'NN'}]
+
+def test_rego_filter():
+    p_dict = {
+        'id': 'test_rego',
+        'title': '...',
+        'type': 'filter',
+        'kind': 'rego',
+        'properties': {
+            "expression": 'result = {"val": 42}',
+            "arguments": {
+            }
+        }
+    }
+    p = Block.create_from_dict(p_dict)
+    p()
+    assert p._result == {"val": 42}
+
+def test_rego_filter_args():
+    p_dict = {
+        'id': 'test_rego',
+        'title': '...',
+        'type': 'filter',
+        'kind': 'rego',
+        'properties': {
+            "expression": 'result = {"val": 42, "data.foo": data.foo}',
+            "arguments": {
+                'foo': 'bar'
+            }
+        }
+    }
+    p = Block.create_from_dict(p_dict)
+    p()
+    assert p._result == {"val": 42, "data.foo": "bar"}
+
+def test_rego_filter_xxx():
+    p_dict = {
+        'id': 'test_rego',
+        'title': '...',
+        'type': 'filter',
+        'kind': 'rego',
+        'properties': {
+            "expression": 'result = {"val": 42, "data.foo": data.foo}',
+            "arguments": {
+                'foo': 'bar'
+            }
+        }
+    }
+    p = Block.create_from_dict(p_dict)
+    p()
+    assert p._result == {"val": 42, "data.foo": "bar"}
