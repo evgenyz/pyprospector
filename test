@@ -1,4 +1,6 @@
 #!/bin/sh
 
-export PYTHONPATH=.
-pytest -v tests
+export PYTHONPATH=`pwd`
+cd tests
+pytest -v
+cd ..
