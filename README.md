@@ -29,7 +29,7 @@ Prospector
 Execute a *plan*:
 
 ```shell
-./prospector content/artifacts/e8.json`
+./prospector content/artifacts/e8.json
 ```
 
 Execute an individual *test*:
@@ -50,5 +50,5 @@ Execute an individual *test* with JSON output only:
 Execute an individual *test* and generate [Markdeep](https://casual-effects.com/markdeep/) *report* (which would self-render as HTML by your browser):
 
 ```shell
-./prospector content/artifacts/no_empty_passwords.json -r report.md.html 
+./prospector content/artifacts/sudo_remove_nopasswd.json -r report.md.html 
 ```
