@@ -112,12 +112,15 @@ class Executor:
             if self._target.scheme == 'container':
                 cmd = ['/usr/bin/podman', 'exec', self._target.netloc] + cmd
             elif self._target.scheme == 'ssh':
-                if sudo:
-                    cmd = ['sudo'] + cmd
                 if cmd[0] == '/usr/bin/sh' and cmd[1] == '-c':
                     # FIXME This is UGLY! Needs better escaping everywhere.
-                    cmd = ['/usr/bin/ssh', self._target.netloc] + [' '.join(cmd[:2]) + ' "' + cmd[2] + '"']
+                    if sudo:
+                        cmd = ['/usr/bin/ssh', self._target.netloc] + ['sudo ' + ' '.join(cmd[:2]) + ' "' + cmd[2] + '"']
+                    else:
+                        cmd = ['/usr/bin/ssh', self._target.netloc] + [' '.join(cmd[:2]) + ' "' + cmd[2] + '"']
                 else:
+                    if sudo:
+                        cmd = ['sudo'] + cmd
                     cmd = ['/usr/bin/ssh', self._target.netloc] + [' '.join(cmd)]
             else:
                 # TODO: We can't be here
