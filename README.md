@@ -52,3 +52,17 @@ Execute an individual *test* and generate [Markdeep](https://casual-effects.com/
 ```shell
 ./prospector content/artifacts/sudo_remove_nopasswd.json -r report.md.html 
 ```
+
+Execute an individual *test* in a running container:
+
+```shell
+./prospector content/artifacts/no_empty_passwords.json -T container://container_name
+```
+
+Execute an individual *test* on a different host:
+
+```shell
+./prospector content/artifacts/no_empty_passwords.json -T ssh://hostname
+```
+**Note** 
+Very limited and experimental: interactive auth is not supported at this moment, and the same goes for sudo (for it to work you must allow the user to run sudo without password).
